@@ -53,7 +53,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   const Icon(Icons.monitor, color: Colors.cyanAccent, size: 60),
                   Positioned(
-                    child: Icon(Icons.play_arrow, color: Colors.greenAccent.withOpacity(0.8), size: 30),
+                    child: Icon(Icons.play_arrow, color: Colors.greenAccent.withValues(alpha: 0.8), size: 30),
                   ),
                 ],
               ),

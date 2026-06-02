@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../domain/models/screen_config.dart';
 import '../../../domain/models/playlist_content.dart';
 import '../../../domain/models/content_play_log.dart';
@@ -5,7 +6,7 @@ import '../../../domain/models/content_play_log.dart';
 class DatabaseImplementation {
   static Future<void> init() async {
     // No-op for web or use local storage
-    print('Database initialized for Web (MOCK)');
+    debugPrint('Database initialized for Web (MOCK)');
   }
 
   static Future<void> saveConfig(ScreenConfig config) async {}

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../local/isar_database_manager.dart';
 import '../../core/network/dio_client.dart';
 
@@ -38,10 +39,10 @@ class MetricsBufferManager {
       if (response.statusCode == 200) {
         final idsToDelete = pendingLogs.map((l) => l.id!).toList();
         await IsarDatabaseManager.deleteLogs(idsToDelete);
-        print('Synced ${pendingLogs.length} metrics');
+        debugPrint('Synced ${pendingLogs.length} metrics');
       }
     } catch (e) {
-      print('Metrics sync failed: $e');
+      debugPrint('Metrics sync failed: $e');
     } finally {
       _isSyncing = false;
     }

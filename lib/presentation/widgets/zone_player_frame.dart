@@ -71,7 +71,7 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
         _videoController!.addListener(_videoListener);
       }
     } catch (e) {
-      print('Video Error in ${widget.regionId}: $e');
+      debugPrint('Video Error in ${widget.regionId}: $e');
       _next();
     }
   }

@@ -1,6 +1,4 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../core/services/device_info_service.dart';
 import '../../data/local/isar_database_manager.dart';
 
 class DiagnosticsHUD extends StatefulWidget {
@@ -14,11 +12,9 @@ class DiagnosticsHUD extends StatefulWidget {
 
 class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _deviceInfo = DeviceInfoService();
   
-  Map<String, dynamic>? _vitals;
   int _bufferedOffline = 0;
-  int _syncedCloud = 0;
+  final _syncedCloud = 0;
   int _cachedSchedules = 0;
 
   @override
@@ -29,13 +25,11 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Future<void> _loadStats() async {
-    final vitals = await _deviceInfo.getVitals();
     final pending = await IsarDatabaseManager.getPendingLogs(1000);
     final allContents = await IsarDatabaseManager.getAllContents();
     
     if (mounted) {
       setState(() {
-        _vitals = vitals;
         _bufferedOffline = pending.length;
         _cachedSchedules = allContents.length;
       });
@@ -53,11 +47,11 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
-          color: const Color(0xFF020810).withOpacity(0.9),
+          color: const Color(0xFF020810).withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: Colors.white10),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 40, spreadRadius: 10),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 40, spreadRadius: 10),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -184,7 +178,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             ],
           ),
           const SizedBox(height: 32),
-          Text('SQLITE ROOM CACHED SCHEDULES ($_cachedSchedules ACTIVE)', style: TextStyle(color: Colors.blueAccent.withOpacity(0.7), fontSize: 11, fontWeight: FontWeight.bold)),
+          Text('SQLITE ROOM CACHED SCHEDULES ($_cachedSchedules ACTIVE)', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           _buildScheduleItem('Premium Roast Latte Promo', 'Cafe Venue', '6s', isPlaying: true),
         ],
@@ -230,7 +224,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             ],
           ),
           const Spacer(),
-          Text('ROOM DATABASE PLAY TRACKS Log: \'ad_impressions\'', style: TextStyle(color: Colors.blueAccent.withOpacity(0.7), fontSize: 11, fontWeight: FontWeight.bold)),
+          Text('ROOM DATABASE PLAY TRACKS Log: \'ad_impressions\'', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -240,14 +234,14 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white10),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: Colors.blueAccent.withOpacity(0.7), fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(title, style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           ...children,
         ],
@@ -297,7 +291,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white10),
       ),
@@ -316,9 +310,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: color == Colors.white10 ? color : color.withOpacity(0.2),
+          color: color == Colors.white10 ? color : color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color == Colors.white10 ? Colors.white10 : color.withOpacity(0.5)),
+          border: Border.all(color: color == Colors.white10 ? Colors.white10 : color.withValues(alpha: 0.5)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -336,9 +330,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isPlaying ? Colors.cyanAccent.withOpacity(0.5) : Colors.white10),
+        border: Border.all(color: isPlaying ? Colors.cyanAccent.withValues(alpha: 0.5) : Colors.white10),
       ),
       child: Row(
         children: [

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'player_screen.dart';
+import 'control_console_screen.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/services/device_info_service.dart';
 import '../../core/network/dio_client.dart';
@@ -119,7 +119,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         TextButton.icon(
           onPressed: () {
              Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const PlayerScreen()),
+              MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
             );
           },
           icon: const Icon(Icons.close, color: Colors.white54, size: 18),

@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'provisioning_screen.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../core/network/dio_client.dart';
 import '../../domain/models/layout_config.dart';
 import '../../domain/models/playlist_content.dart';
@@ -30,6 +32,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _fetchContent() async {
     try {
+      final secureStorage = SecureStorageService();
+      final isPaired = await secureStorage.hasCredentials();
+
+      if (!isPaired) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
+          );
+        }
+        return;
+      }
+
       final response = await _dioClient.dio.get('/android/screens/MOCK-ID/content');
       if (response.statusCode == 200) {
         final data = response.data;

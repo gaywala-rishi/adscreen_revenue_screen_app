@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'player_screen.dart';
 import '../widgets/diagnostics_hud.dart';
-import '../../core/services/device_info_service.dart';
 
 class ControlConsoleScreen extends StatefulWidget {
   const ControlConsoleScreen({super.key});
@@ -11,7 +10,6 @@ class ControlConsoleScreen extends StatefulWidget {
 }
 
 class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
-  final _deviceInfo = DeviceInfoService();
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +111,7 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.02),
+        color: Colors.white.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'device_info_service.dart';
 import '../network/dio_client.dart';
@@ -8,7 +8,7 @@ import '../network/dio_client.dart';
 class BackgroundServiceManager {
   static Future<void> initializeService() async {
     if (kIsWeb) {
-      print('Background Service is not supported on Web. Skipping initialization.');
+      debugPrint('Background Service is not supported on Web. Skipping initialization.');
       return;
     }
 

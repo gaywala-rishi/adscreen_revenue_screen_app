@@ -1,6 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 import 'native/isar_database_impl.dart' if (dart.library.html) 'web/isar_database_impl.dart' as impl;
 import '../../domain/models/screen_config.dart';
 import '../../domain/models/playlist_content.dart';

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../local/isar_database_manager.dart';
 import '../../domain/models/playlist_content.dart';
@@ -45,10 +46,10 @@ class AssetDownloadManager {
         content.isDownloaded = true;
         
         await IsarDatabaseManager.savePlaylistContent(content);
-        print('Downloaded: ${content.url}');
+        debugPrint('Downloaded: ${content.url}');
       }
     } catch (e) {
-      print('Download failed for ${content.url}: $e');
+      debugPrint('Download failed for ${content.url}: $e');
     } finally {
       _activeDownloads--;
     }
@@ -65,7 +66,7 @@ class AssetDownloadManager {
     await for (var entity in assetsDir.list()) {
       if (entity is File && !activePaths.contains(entity.path)) {
         await entity.delete();
-        print('Pruned stale asset: ${entity.path}');
+        debugPrint('Pruned stale asset: ${entity.path}');
       }
     }
   }
