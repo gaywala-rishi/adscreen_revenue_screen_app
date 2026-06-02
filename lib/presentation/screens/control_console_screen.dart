@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'player_screen.dart';
 import '../widgets/diagnostics_hud.dart';
+import '../../core/services/device_info_service.dart';
 
 class ControlConsoleScreen extends StatefulWidget {
   const ControlConsoleScreen({super.key});
@@ -10,6 +12,32 @@ class ControlConsoleScreen extends StatefulWidget {
 }
 
 class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
+  final _deviceInfo = DeviceInfoService();
+  Timer? _vitalsTimer;
+  Map<String, dynamic>? _vitals;
+
+  @override
+  void initState() {
+    super.initState();
+    _startVitalsLoop();
+  }
+
+  void _startVitalsLoop() {
+    _vitalsTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      final vitals = await _deviceInfo.getVitals();
+      if (mounted) {
+        setState(() {
+          _vitals = vitals;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _vitalsTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,32 +57,37 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'AdScreen Playout Port',
-                            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Simulated Android TV physical display output',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
-                          ),
-                        ],
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'AdScreen Playout Port',
+                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              'Simulated Android TV physical display output',
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => const PlayerScreen()),
                           );
                         },
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('TV Fullscreen'),
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: const Text('TV Fullscreen', style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent,
                           foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                       ),
                     ],
@@ -108,6 +141,9 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
   }
 
   Widget _buildFooterMiniStats() {
+    final double cpu = _vitals?['cpu_load'] ?? 0.05;
+    final double temp = _vitals?['temperature'] ?? 36.0;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -124,9 +160,9 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
           const SizedBox(width: 12),
           const Text('FALLBACK OFFLINE PLAYBACK ACTIVE', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
           const Spacer(),
-          _footerStat('CPU LOAD', '2.7%', Colors.blueAccent),
+          _footerStat('CPU LOAD', '${(cpu * 100).toStringAsFixed(1)}%', Colors.blueAccent),
           const SizedBox(width: 24),
-          _footerStat('TEMPERATURE', '36.4°C', Colors.pinkAccent),
+          _footerStat('TEMPERATURE', '${temp.toStringAsFixed(1)}°C', Colors.pinkAccent),
         ],
       ),
     );

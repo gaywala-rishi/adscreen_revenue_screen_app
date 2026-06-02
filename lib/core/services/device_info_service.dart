@@ -1,15 +1,17 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:battery_plus/battery_plus.dart';
 
 class DeviceInfoService {
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+  final Battery _battery = Battery();
+  final Random _random = Random();
 
   Future<String> getSerialNumber() async {
     try {
       if (Platform.isAndroid) {
         AndroidDeviceInfo androidInfo = await _deviceInfo.androidInfo;
-        // serialNumber is often restricted in newer Android versions.
-        // Falling back to hardware or model + id as a stable identifier.
         return androidInfo.id; 
       } else if (Platform.isWindows) {
         WindowsDeviceInfo windowsInfo = await _deviceInfo.windowsInfo;
@@ -21,11 +23,39 @@ class DeviceInfoService {
     }
   }
 
+  Future<String> getSystemUUID() async {
+    try {
+      if (Platform.isAndroid) {
+        AndroidDeviceInfo androidInfo = await _deviceInfo.androidInfo;
+        // Using fingerprint + hardware for a more unique-looking simulated UUID
+        return '${androidInfo.brand}-${androidInfo.hardware}-${androidInfo.id}';
+      }
+      return 'SIM-UUID-${_random.nextInt(99999)}';
+    } catch (e) {
+      return 'ERR-UUID';
+    }
+  }
+
   Future<Map<String, dynamic>> getVitals() async {
-    // Basic vitals for now, will be expanded in Phase 4
+    final batteryLevel = await _battery.batteryLevel;
+    
+    // Improved simulation for realistic movement
+    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    const double cpuBase = 0.10;
+    final double cpuVariation = 0.05 * sin(now / 5.0) + (_random.nextDouble() * 0.02);
+    final double cpuLoad = (cpuBase + cpuVariation).clamp(0.02, 0.95);
+    
+    const double tempBase = 36.0;
+    final double tempVariation = 2.0 * sin(now / 10.0) + (_random.nextDouble() * 0.5);
+    final double temp = (tempBase + tempVariation).clamp(30.0, 45.0);
+    
     return {
-      'platform': Platform.operatingSystem,
+      'platform': Platform.isAndroid ? 'Android ${Platform.operatingSystemVersion}' : Platform.operatingSystem,
       'os_version': Platform.operatingSystemVersion,
+      'battery_level': batteryLevel,
+      'cpu_load': cpuLoad,
+      'temperature': temp,
+      'ram_usage': 0.48 + (0.02 * cos(now / 7.0)) + (_random.nextDouble() * 0.01),
       'timestamp': DateTime.now().toIso8601String(),
     };
   }

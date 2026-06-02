@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/services/device_info_service.dart';
 import '../../data/local/isar_database_manager.dart';
 
 class DiagnosticsHUD extends StatefulWidget {
@@ -12,28 +14,61 @@ class DiagnosticsHUD extends StatefulWidget {
 
 class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _deviceInfo = DeviceInfoService();
+  Timer? _vitalsTimer;
   
+  String _serial = 'Loading...';
+  String _uuid = 'Loading...';
+  String _os = 'Loading...';
+
+  Map<String, dynamic>? _vitals;
   int _bufferedOffline = 0;
-  final _syncedCloud = 0;
+  final int _syncedCloud = 0;
   int _cachedSchedules = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _loadStats();
+    _loadStaticInfo();
+    _startVitalsLoop();
   }
 
-  Future<void> _loadStats() async {
+  Future<void> _loadStaticInfo() async {
+    final serial = await _deviceInfo.getSerialNumber();
+    final uuid = await _deviceInfo.getSystemUUID();
+    final vitals = await _deviceInfo.getVitals();
     final pending = await IsarDatabaseManager.getPendingLogs(1000);
     final allContents = await IsarDatabaseManager.getAllContents();
     
     if (mounted) {
       setState(() {
+        _serial = serial;
+        _uuid = uuid;
+        _os = vitals['platform'];
         _bufferedOffline = pending.length;
         _cachedSchedules = allContents.length;
+        _vitals = vitals;
       });
     }
+  }
+
+  void _startVitalsLoop() {
+    _vitalsTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      final vitals = await _deviceInfo.getVitals();
+      if (mounted) {
+        setState(() {
+          _vitals = vitals;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _vitalsTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -143,7 +178,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildRegistrationTab() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,9 +188,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           const Text('Register with the central DOOH panel to verify server authentication.', style: TextStyle(color: Colors.grey, fontSize: 13)),
           const SizedBox(height: 32),
           _buildInfoCard('HARDWARE METADATA', [
-            _buildInfoRow('Hardware Serial', 'AD-DOOH-5582-TV'),
-            _buildInfoRow('System UUID', 'bd6782a1-ff44-4822-ba92-b430a90df1ef'),
-            _buildInfoRow('OS Platform', 'Android 12 (API 31) TV'),
+            _buildInfoRow('Hardware Serial', _serial),
+            _buildInfoRow('System UUID', _uuid),
+            _buildInfoRow('OS Platform', _os),
           ]),
         ],
       ),
@@ -163,7 +198,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildSyncTab() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +222,10 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildHealthTab() {
-    return Padding(
+    final double cpu = _vitals?['cpu_load'] ?? 0.05;
+    final double ram = _vitals?['ram_usage'] ?? 0.45;
+    
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,9 +235,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           const Text('Real-time metrics sent dynamically to central system via heartbeats.', style: TextStyle(color: Colors.grey, fontSize: 13)),
           const SizedBox(height: 32),
           _buildInfoCard('HARDWARE TELEMETRY SPARKBARS', [
-            _buildProgressRow('CPU Load', 0.031, '3.1%', Colors.blue),
+            _buildProgressRow('CPU Load', cpu, '${(cpu * 100).toStringAsFixed(1)}%', Colors.blue),
             const SizedBox(height: 20),
-            _buildProgressRow('RAM Usage', 0.521, '52.1%', Colors.green),
+            _buildProgressRow('RAM Usage', ram, '${(ram * 100).toStringAsFixed(1)}%', Colors.green),
           ]),
         ],
       ),
@@ -207,7 +245,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildPlayoutLogsTab() {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +261,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               Expanded(child: _buildStatBox('SYNCED CLOUD-SAFE', _syncedCloud.toString())),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 24),
           Text('ROOM DATABASE PLAY TRACKS Log: \'ad_impressions\'', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
@@ -251,12 +289,25 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500, fontFamily: 'monospace')),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white38, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'monospace',
+            ),
+            softWrap: true,
+          ),
         ],
       ),
     );
@@ -360,6 +411,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildFooter() {
+    final double cpu = _vitals?['cpu_load'] ?? 0.05;
+    final double temp = _vitals?['temperature'] ?? 32.0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: const BoxDecoration(border: Border(top: BorderSide(color: Colors.white10))),
@@ -375,9 +429,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           ),
           Row(
             children: [
-              _buildFooterMiniStat('CPU LOAD', '3.4%'),
+              _buildFooterMiniStat('CPU LOAD', '${(cpu * 100).toStringAsFixed(1)}%'),
               const SizedBox(width: 20),
-              _buildFooterMiniStat('TEMPERATURE', '36.4°C', valueColor: Colors.pinkAccent),
+              _buildFooterMiniStat('TEMPERATURE', '${temp.toStringAsFixed(1)}°C', valueColor: Colors.pinkAccent),
             ],
           ),
         ],
@@ -393,11 +447,5 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         Text(value, style: TextStyle(color: valueColor, fontSize: 12, fontWeight: FontWeight.bold)),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 }

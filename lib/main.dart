@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'core/services/background_service_manager.dart';
 import 'data/local/isar_database_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Enforce Landscape Orientation
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
   
   // Initialize Local Database
   await IsarDatabaseManager.init();

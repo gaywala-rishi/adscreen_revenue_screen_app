@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/material.dart'; // Added for Colors
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'device_info_service.dart';
 import '../network/dio_client.dart';
 
@@ -14,15 +16,16 @@ class BackgroundServiceManager {
 
     final service = FlutterBackgroundService();
 
+    // Using default configuration to ensure maximum compatibility
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
         isForegroundMode: true,
-        notificationChannelId: 'adscreen_player_service',
         initialNotificationTitle: 'AdScreen Player',
-        initialNotificationContent: 'Running background sync...',
+        initialNotificationContent: 'Monitoring device health...',
         foregroundServiceNotificationId: 888,
+        foregroundServiceTypes: [AndroidForegroundType.dataSync],
       ),
       iosConfiguration: IosConfiguration(
         autoStart: true,
