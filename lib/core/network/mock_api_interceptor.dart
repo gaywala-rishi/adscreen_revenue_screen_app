@@ -9,6 +9,78 @@ class MockApiInterceptor extends Interceptor {
     final path = options.path;
 
     if (path.contains('/android/screens/init')) {
+      final requestData = options.data;
+      if (requestData is Map && requestData.containsKey('provisionToken')) {
+        final String token = requestData['provisionToken'] ?? '';
+        final String venueId = requestData['venueId'] ?? '';
+
+        // If manual token flow is triggered, simulate validations
+        if (token.isEmpty || venueId.isEmpty) {
+          return handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response(
+                requestOptions: options,
+                statusCode: 400,
+                data: {
+                  'success': false,
+                  'message': 'Both Provisioning Token and Venue ID are required.',
+                },
+              ),
+              type: DioExceptionType.badResponse,
+            ),
+          );
+        }
+
+        // Simulate invalid/expired token behavior for developer tests
+        if (token.toUpperCase() == 'EXPIRED') {
+          return handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response(
+                requestOptions: options,
+                statusCode: 403,
+                data: {
+                  'success': false,
+                  'message': 'Provisioning token has expired.',
+                },
+              ),
+              type: DioExceptionType.badResponse,
+            ),
+          );
+        } else if (token.toUpperCase() == 'INVALID') {
+          return handler.reject(
+            DioException(
+              requestOptions: options,
+              response: Response(
+                requestOptions: options,
+                statusCode: 403,
+                data: {
+                  'success': false,
+                  'message': 'Invalid provisioning token.',
+                },
+              ),
+              type: DioExceptionType.badResponse,
+            ),
+          );
+        }
+
+        // Successful manual pairing response
+        return handler.resolve(
+          Response(
+            requestOptions: options,
+            data: {
+              'success': true,
+              'screenId': 'SCREEN-MANUAL-999',
+              'screenToken': 'mock-jwt-manual-token-abc-123',
+              'pairingCode': 'MANUAL',
+            },
+            statusCode: 200,
+          ),
+        );
+      }
+
+      // Default automatic pairing PIN code response (original behavior)
       return handler.resolve(
         Response(
           requestOptions: options,
