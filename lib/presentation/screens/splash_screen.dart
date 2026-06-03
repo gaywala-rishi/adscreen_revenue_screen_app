@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'control_console_screen.dart';
 import 'provisioning_screen.dart';
 import '../../core/services/secure_storage_service.dart';
+import '../../core/services/device_info_service.dart';
+import '../../core/network/dio_client.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,8 +22,47 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _navigateToNext() async {
     await Future.delayed(const Duration(seconds: 3));
     
+    if (!mounted) return;
+
     final secureStorage = SecureStorageService();
-    final bool isPaired = await secureStorage.hasCredentials();
+    final deviceInfo = DeviceInfoService();
+    final dioClient = DioClient();
+
+    bool isPaired = false;
+
+    try {
+      final serialNumber = await deviceInfo.getSerialNumber();
+      final response = await dioClient.dio.post(
+        '/android/screens/init',
+        data: {'serialNumber': serialNumber},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = response.data;
+        final Map<String, dynamic> bodyData = responseData.containsKey('data') 
+            ? (responseData['data'] as Map<String, dynamic>? ?? {}) 
+            : responseData;
+
+        final bool paired = bodyData['paired'] == true || 
+            (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
+
+        if (paired) {
+          await secureStorage.saveScreenCredentials(
+            bodyData['screenId'].toString(),
+            bodyData['screenToken'].toString(),
+          );
+          isPaired = true;
+        } else {
+          await secureStorage.clearCredentials();
+          isPaired = false;
+        }
+      } else {
+        isPaired = await secureStorage.hasCredentials();
+      }
+    } catch (e) {
+      debugPrint('Startup init screen check failed: $e. Falling back to local credentials.');
+      isPaired = await secureStorage.hasCredentials();
+    }
 
     if (!mounted) return;
 

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/services/device_info_service.dart';
+import '../../core/services/secure_storage_service.dart';
 import '../../data/local/isar_database_manager.dart';
+import '../screens/provisioning_screen.dart';
 
 class DiagnosticsHUD extends StatefulWidget {
   final VoidCallback onClose;
@@ -192,6 +194,29 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             _buildInfoRow('System UUID', _uuid),
             _buildInfoRow('OS Platform', _os),
           ]),
+          const SizedBox(height: 32),
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final secureStorage = SecureStorageService();
+                await secureStorage.clearCredentials();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              icon: const Icon(Icons.link_off, color: Colors.black),
+              label: const Text('DISCONNECT & RESET DEVICE', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
         ],
       ),
     );

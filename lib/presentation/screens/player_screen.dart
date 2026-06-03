@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'provisioning_screen.dart';
 import '../../core/services/secure_storage_service.dart';
+import 'package:dio/dio.dart';
 import '../../core/network/dio_client.dart';
 import '../../domain/models/layout_config.dart';
 import '../../domain/models/playlist_content.dart';
@@ -76,6 +77,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
           _isLoading = false;
         });
       }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403 || e.response?.statusCode == 404) {
+        final secureStorage = SecureStorageService();
+        await secureStorage.clearCredentials();
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
+          );
+        }
+        return;
+      }
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _error = e.toString();
