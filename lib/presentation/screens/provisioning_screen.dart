@@ -45,6 +45,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   }
 
   Future<void> _initProvisioning() async {
+    debugPrint('[ProvisioningScreen] Starting screen registration init...');
     setState(() {
       _isLoading = true;
       _error = null;
@@ -54,16 +55,17 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
 
     try {
       _serialNumber = await _deviceInfo.getSerialNumber();
+      debugPrint('[ProvisioningScreen] Device serial number: $_serialNumber');
       
       final response = await _dioClient.dio.post(
         '/android/screens/init',
         data: {'serialNumber': _serialNumber},
       );
 
+      debugPrint('[ProvisioningScreen] init response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = response.data;
-        
-        // Handle standard backend nesting structure: { success: true, data: { ... } }
         final Map<String, dynamic> bodyData = responseData.containsKey('data') 
             ? (responseData['data'] as Map<String, dynamic>? ?? {}) 
             : responseData;
@@ -71,15 +73,18 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         final bool isPaired = bodyData['paired'] == true || 
             (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
 
+        debugPrint('[ProvisioningScreen] Screen pairing status from backend: isPaired=$isPaired');
+
         if (isPaired) {
+          final screenId = bodyData['screenId'].toString();
+          final screenToken = bodyData['screenToken'].toString();
+          debugPrint('[ProvisioningScreen] Screen is ALREADY paired. Saving credentials - ID: $screenId');
+          
           setState(() {
             _isLoading = false;
           });
           
-          await _secureStorage.saveScreenCredentials(
-            bodyData['screenId'].toString(),
-            bodyData['screenToken'].toString(),
-          );
+          await _secureStorage.saveScreenCredentials(screenId, screenToken);
 
           if (mounted) {
             Navigator.of(context).pushReplacement(
@@ -87,21 +92,24 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
             );
           }
         } else {
-          // Screen is not paired yet. Show PIN and start polling loop.
+          final pCode = bodyData['pairingCode']?.toString() ?? '--- ---';
+          debugPrint('[ProvisioningScreen] Screen is not paired. Setting PIN: $pCode and starting polling loop.');
           setState(() {
-            _pairingCode = bodyData['pairingCode']?.toString() ?? '--- ---';
+            _pairingCode = pCode;
             _isLoading = false;
           });
           
           _startPairingPoll();
         }
       } else {
+        debugPrint('[ProvisioningScreen] Registration failed: non-200 status code');
         setState(() {
           _error = 'Failed to initialize screen registration';
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('[ProvisioningScreen] Registration error: $e');
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -110,6 +118,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   }
 
   void _startPairingPoll() {
+    debugPrint('[ProvisioningScreen] Starting background pairing poll every 5s...');
     _pairingTimer?.cancel();
     _pairingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       await _checkPairingStatus();
@@ -119,6 +128,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   Future<void> _checkPairingStatus() async {
     if (_serialNumber == null) return;
     
+    debugPrint('[ProvisioningScreen] Polling pairing status for serial: $_serialNumber');
     try {
       final response = await _dioClient.dio.post(
         '/android/screens/init',
@@ -134,13 +144,16 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         final bool isPaired = bodyData['paired'] == true || 
             (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
 
+        debugPrint('[ProvisioningScreen] Polling status check: isPaired=$isPaired');
+
         if (isPaired) {
+          final screenId = bodyData['screenId'].toString();
+          final screenToken = bodyData['screenToken'].toString();
+          debugPrint('[ProvisioningScreen] SUCCESS! Screen successfully paired on server. Saving credentials - ID: $screenId');
+          
           _pairingTimer?.cancel();
           
-          await _secureStorage.saveScreenCredentials(
-            bodyData['screenId'].toString(),
-            bodyData['screenToken'].toString(),
-          );
+          await _secureStorage.saveScreenCredentials(screenId, screenToken);
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -157,6 +170,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
           // If pairingCode changes (e.g. expired and regenerated), update it
           final newCode = bodyData['pairingCode']?.toString();
           if (newCode != null && newCode != _pairingCode) {
+            debugPrint('[ProvisioningScreen] Pairing PIN updated: $newCode');
             setState(() {
               _pairingCode = newCode;
             });
@@ -164,7 +178,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Pairing poll check failed: $e');
+      debugPrint('[ProvisioningScreen] Pairing poll check failed: $e');
     }
   }
 
