@@ -8,6 +8,8 @@ class SecureStorageService {
   static const String _keyScreenToken = 'screen_token';
   static const String _keyCachedLayout = 'cached_layout';
 
+  static const String _keySyncedLogsCount = 'synced_logs_count';
+
   Future<void> saveScreenCredentials(String screenId, String token) async {
     await _storage.write(key: _keyScreenId, value: screenId);
     await _storage.write(key: _keyScreenToken, value: token);
@@ -25,6 +27,7 @@ class SecureStorageService {
     await _storage.delete(key: _keyScreenId);
     await _storage.delete(key: _keyScreenToken);
     await _storage.delete(key: _keyCachedLayout);
+    await clearSyncedLogsCount();
   }
 
   Future<bool> hasCredentials() async {
@@ -46,5 +49,19 @@ class SecureStorageService {
     } catch (e) {
       return null;
     }
+  }
+
+  Future<int> getSyncedLogsCount() async {
+    final val = await _storage.read(key: _keySyncedLogsCount);
+    return val != null ? int.tryParse(val) ?? 0 : 0;
+  }
+
+  Future<void> incrementSyncedLogsCount(int count) async {
+    final current = await getSyncedLogsCount();
+    await _storage.write(key: _keySyncedLogsCount, value: (current + count).toString());
+  }
+
+  Future<void> clearSyncedLogsCount() async {
+    await _storage.delete(key: _keySyncedLogsCount);
   }
 }

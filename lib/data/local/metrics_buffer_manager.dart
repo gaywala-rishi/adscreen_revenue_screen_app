@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../local/isar_database_manager.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/services/secure_storage_service.dart';
 
 class MetricsBufferManager {
   final DioClient _dioClient = DioClient();
@@ -39,6 +40,10 @@ class MetricsBufferManager {
       if (response.statusCode == 200) {
         final idsToDelete = pendingLogs.map((l) => l.id!).toList();
         await IsarDatabaseManager.deleteLogs(idsToDelete);
+        
+        final secureStorage = SecureStorageService();
+        await secureStorage.incrementSyncedLogsCount(pendingLogs.length);
+        
         debugPrint('Synced ${pendingLogs.length} metrics');
       }
     } catch (e) {

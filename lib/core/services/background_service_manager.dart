@@ -17,16 +17,11 @@ class BackgroundServiceManager {
 
     final service = FlutterBackgroundService();
 
-    // Using default configuration to ensure maximum compatibility
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
-        isForegroundMode: true,
-        initialNotificationTitle: 'AdScreen Player',
-        initialNotificationContent: 'Monitoring device health...',
-        foregroundServiceNotificationId: 888,
-        foregroundServiceTypes: [AndroidForegroundType.dataSync],
+        isForegroundMode: false,
       ),
       iosConfiguration: IosConfiguration(
         autoStart: true,
@@ -64,40 +59,23 @@ class BackgroundServiceManager {
 
     // Heartbeat Loop using WebSockets - fixed 4-second interval
     Timer.periodic(const Duration(seconds: 4), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          final vitals = await deviceInfo.getVitals();
-          
-          try {
-            final secureStorage = SecureStorageService();
-            final token = await secureStorage.getScreenToken();
-            
-            if (token != null) {
-              if (!socketService.isConnected) {
-                debugPrint('[BackgroundService] Socket disconnected. Connecting authenticated socket...');
-                socketService.initAuthenticatedSocket(token: token);
-              }
-              socketService.emitTelemetry(vitals);
-              
-              service.setForegroundNotificationInfo(
-                title: "AdScreen Player [Online]",
-                content: "Last Socket Heartbeat: ${DateTime.now().hour}:${DateTime.now().minute}",
-              );
-            } else {
-              debugPrint('[BackgroundService] No token found in background service. Telemetry skipped.');
-              service.setForegroundNotificationInfo(
-                title: "AdScreen Player [Offline]",
-                content: "Unpaired display - waiting for pairing PIN",
-              );
-            }
-          } catch (e) {
-            debugPrint('[BackgroundService] Telemetry loop error: $e');
-            service.setForegroundNotificationInfo(
-              title: "AdScreen Player [Offline]",
-              content: "Sync Error: ${e.toString().split('\n').first}",
-            );
+      final vitals = await deviceInfo.getVitals();
+      
+      try {
+        final secureStorage = SecureStorageService();
+        final token = await secureStorage.getScreenToken();
+        
+        if (token != null) {
+          if (!socketService.isConnected) {
+            debugPrint('[BackgroundService] Socket disconnected. Connecting authenticated socket...');
+            socketService.initAuthenticatedSocket(token: token);
           }
+          socketService.emitTelemetry(vitals);
+        } else {
+          debugPrint('[BackgroundService] No token found in background service. Telemetry skipped.');
         }
+      } catch (e) {
+        debugPrint('[BackgroundService] Telemetry loop error: $e');
       }
     });
   }

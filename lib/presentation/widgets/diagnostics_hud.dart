@@ -33,13 +33,15 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
 
   Map<String, dynamic>? _vitals;
   int _bufferedOffline = 0;
-  final int _syncedCloud = 0;
+  int _syncedCloud = 0;
   int _cachedSchedules = 0;
   List<PlaylistContent> _cachedPlaylists = [];
   List<ContentPlayLog> _pendingLogs = [];
 
   bool _isSyncing = false;
   ConnectivityResult _connectivityResult = ConnectivityResult.none;
+  double? _streamDiffSeconds;
+  bool _isSyncingDiff = false;
 
   @override
   void initState() {
@@ -58,6 +60,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     final pending = await IsarDatabaseManager.getPendingLogs(1000);
     final allContents = await IsarDatabaseManager.getAllContents();
     
+    final synced = await secureStorage.getSyncedLogsCount();
+    
     if (mounted) {
       setState(() {
         _serial = serial;
@@ -65,6 +69,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         _os = vitals['platform'];
         _bufferedOffline = pending.length;
         _pendingLogs = pending.take(20).toList();
+        _syncedCloud = synced;
         _cachedSchedules = allContents.length;
         _cachedPlaylists = allContents;
         _vitals = vitals;
@@ -77,12 +82,15 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
       final vitals = await _deviceInfo.getVitals();
       final pending = await IsarDatabaseManager.getPendingLogs(1000);
       final allContents = await IsarDatabaseManager.getAllContents();
+      final secureStorage = SecureStorageService();
+      final synced = await secureStorage.getSyncedLogsCount();
       if (mounted) {
         setState(() {
           _vitals = vitals;
           _os = vitals['platform'];
           _bufferedOffline = pending.length;
           _pendingLogs = pending.take(20).toList();
+          _syncedCloud = synced;
           _cachedSchedules = allContents.length;
           _cachedPlaylists = allContents;
         });
@@ -214,40 +222,38 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Future<void> _triggerCampaignDiff() async {
-    final contents = await IsarDatabaseManager.getAllContents();
-    const mockCampaignId = 'MOCK-CAMPAIGN-AD';
-    final hasMock = contents.any((c) => c.contentId == mockCampaignId);
+    if (_isSyncingDiff) return;
+    setState(() {
+      _isSyncingDiff = true;
+    });
 
-    List<PlaylistContent> updatedContents = [];
-    if (hasMock) {
-      // Remove mock campaign
-      updatedContents = contents.where((c) => c.contentId != mockCampaignId).toList();
-      debugPrint('[DiagnosticsHUD] Campaign Diff: Removed mock campaign item');
-    } else {
-      // Add mock campaign at the beginning of 'AD_1'
-      // Shift orders of other items in 'AD_1'
-      for (var c in contents) {
-        if (c.regionId == 'AD_1') {
-          c.order += 1;
+    try {
+      final start = DateTime.now();
+      final healthUrl = DioClient.activeBaseUrl.replaceAll('/api/v1', '/health');
+      final response = await DioClient().dio.get(healthUrl);
+      final end = DateTime.now();
+
+      if (response.statusCode == 200) {
+        final serverTimeStr = response.data['timestamp']?.toString();
+        if (serverTimeStr != null) {
+          final serverTime = DateTime.parse(serverTimeStr);
+          final localMid = start.add(end.difference(start) ~/ 2);
+          final drift = serverTime.difference(localMid);
+          final driftSeconds = drift.inMilliseconds / 1000.0;
+          
+          setState(() {
+            _streamDiffSeconds = driftSeconds;
+          });
+          debugPrint('[DiagnosticsHUD] Campaign streaming synced. Difference: ${driftSeconds.toStringAsFixed(3)}s');
         }
-        updatedContents.add(c);
       }
-      updatedContents.add(PlaylistContent(
-        contentId: mockCampaignId,
-        url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-        type: 'video',
-        durationSeconds: 15,
-        regionId: 'AD_1',
-        order: 0,
-        isDownloaded: true,
-        localPath: 'assets/cache/downloads/mock_campaign.mp4',
-      ));
-      debugPrint('[DiagnosticsHUD] Campaign Diff: Injected mock campaign item');
+    } catch (e) {
+      debugPrint('[DiagnosticsHUD] Failed to sync campaign streaming difference: $e');
+    } finally {
+      setState(() {
+        _isSyncingDiff = false;
+      });
     }
-
-    await IsarDatabaseManager.updatePlaylist(updatedContents);
-    PlaylistUpdateNotifier.notify();
-    await _loadStaticInfo(); // Reload the playlist state in HUD
   }
 
   @override
@@ -488,13 +494,19 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   }
 
   Widget _buildCampaignDiffButton() {
-    final hasMock = _cachedPlaylists.any((c) => c.contentId == 'MOCK-CAMPAIGN-AD');
-    final color = hasMock ? Colors.orangeAccent : Colors.cyanAccent;
-    final text = hasMock ? 'Campaign Target ON' : 'Campaign Target OFF';
+    final color = _streamDiffSeconds != null ? Colors.greenAccent : Colors.cyanAccent;
+    String text;
+    if (_isSyncingDiff) {
+      text = 'Syncing Diff...';
+    } else if (_streamDiffSeconds != null) {
+      text = 'Diff: ${_streamDiffSeconds! >= 0 ? '+' : ''}${_streamDiffSeconds!.toStringAsFixed(3)}s';
+    } else {
+      text = 'Sync Campaign Diff';
+    }
 
     return Expanded(
       child: InkWell(
-        onTap: _triggerCampaignDiff,
+        onTap: _isSyncingDiff ? null : _triggerCampaignDiff,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -506,7 +518,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.campaign, color: color, size: 20),
+              Icon(_isSyncingDiff ? Icons.hourglass_empty : Icons.timelapse, color: color, size: 20),
               const SizedBox(width: 10),
               Flexible(
                 child: Text(
