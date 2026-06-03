@@ -57,8 +57,22 @@ class DeviceInfoService {
     final double tempVariation = 2.0 * sin(timeSeconds / 10.0) + (_random.nextDouble() * 0.5);
     final double temp = (tempBase + tempVariation).clamp(30.0, 45.0);
     
+    String platformName = Platform.operatingSystem;
+    if (Platform.isAndroid) {
+      try {
+        AndroidDeviceInfo androidInfo = await _deviceInfo.androidInfo;
+        String brand = androidInfo.brand;
+        if (brand.isNotEmpty) {
+          brand = brand[0].toUpperCase() + brand.substring(1);
+        }
+        platformName = 'Android - $brand';
+      } catch (_) {
+        platformName = 'Android';
+      }
+    }
+
     _cachedVitals = {
-      'platform': Platform.isAndroid ? 'Android ${Platform.operatingSystemVersion}' : Platform.operatingSystem,
+      'platform': platformName,
       'os_version': Platform.operatingSystemVersion,
       'battery_level': batteryLevel,
       'cpu_load': cpuLoad,

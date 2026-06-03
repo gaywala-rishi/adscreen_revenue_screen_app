@@ -40,7 +40,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
 
   Future<void> _loadStaticInfo() async {
     final serial = await _deviceInfo.getSerialNumber();
-    final uuid = await _deviceInfo.getSystemUUID();
+    final secureStorage = SecureStorageService();
+    final screenId = await secureStorage.getScreenId() ?? 'Unregistered';
     final vitals = await _deviceInfo.getVitals();
     final pending = await IsarDatabaseManager.getPendingLogs(1000);
     final allContents = await IsarDatabaseManager.getAllContents();
@@ -48,7 +49,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     if (mounted) {
       setState(() {
         _serial = serial;
-        _uuid = uuid;
+        _uuid = screenId;
         _os = vitals['platform'];
         _bufferedOffline = pending.length;
         _cachedSchedules = allContents.length;
@@ -63,6 +64,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
       if (mounted) {
         setState(() {
           _vitals = vitals;
+          _os = vitals['platform'];
         });
       }
     });
@@ -275,6 +277,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   Widget _buildHealthTab() {
     final double cpu = _vitals?['cpu_load'] ?? 0.05;
     final double ram = _vitals?['ram_usage'] ?? 0.45;
+    final double temp = _vitals?['temperature'] ?? 36.0;
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -289,6 +292,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             _buildProgressRow('CPU Load', cpu, '${(cpu * 100).toStringAsFixed(1)}%', Colors.blue),
             const SizedBox(height: 20),
             _buildProgressRow('RAM Usage', ram, '${(ram * 100).toStringAsFixed(1)}%', Colors.green),
+            const SizedBox(height: 20),
+            _buildProgressRow('Temperature', temp / 100.0, '${temp.toStringAsFixed(1)}°C', Colors.pinkAccent),
           ]),
         ],
       ),

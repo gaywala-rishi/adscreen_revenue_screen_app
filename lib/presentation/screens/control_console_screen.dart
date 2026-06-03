@@ -125,6 +125,7 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
 
   Widget _buildFooterMiniStats() {
     final double cpu = _vitals?['cpu_load'] ?? 0.05;
+    final double ram = _vitals?['ram_usage'] ?? 0.45;
     final double temp = _vitals?['temperature'] ?? 36.0;
 
     return Container(
@@ -144,7 +145,9 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
           const Text('FALLBACK OFFLINE PLAYBACK ACTIVE', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
           const Spacer(),
           _footerStat('CPU LOAD', '${(cpu * 100).toStringAsFixed(1)}%', Colors.blueAccent),
-          const SizedBox(width: 24),
+          const SizedBox(width: 20),
+          _footerStat('RAM USAGE', '${(ram * 100).toStringAsFixed(1)}%', Colors.greenAccent),
+          const SizedBox(width: 20),
           _footerStat('TEMPERATURE', '${temp.toStringAsFixed(1)}°C', Colors.pinkAccent),
         ],
       ),

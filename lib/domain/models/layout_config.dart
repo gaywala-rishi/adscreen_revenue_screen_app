@@ -33,12 +33,12 @@ class LayoutRegion {
 
   factory LayoutRegion.fromJson(Map<String, dynamic> json) {
     return LayoutRegion(
-      id: json['id'],
-      x: (json['x'] as num).toDouble(),
-      y: (json['y'] as num).toDouble(),
-      width: (json['width'] as num).toDouble(),
-      height: (json['height'] as num).toDouble(),
-      type: json['type'],
+      id: json['id'] ?? json['code'] ?? '',
+      x: ((json['x'] ?? json['xPos'] ?? 0.0) as num).toDouble(),
+      y: ((json['y'] ?? json['yPos'] ?? 0.0) as num).toDouble(),
+      width: ((json['width'] ?? 1.0) as num).toDouble(),
+      height: ((json['height'] ?? 1.0) as num).toDouble(),
+      type: json['type'] ?? json['code'] ?? 'image',
     );
   }
 }

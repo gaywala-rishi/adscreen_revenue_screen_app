@@ -49,26 +49,47 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
       final response = await _dioClient.dio.get('/android/screens/MOCK-ID/content');
       if (response.statusCode == 200) {
-        final data = response.data;
-        
+        final responseData = response.data;
+        Map<String, dynamic>? schedule;
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('data') && responseData['data'] is Map<String, dynamic> && responseData['data'].containsKey('schedule')) {
+            schedule = responseData['data']['schedule'] as Map<String, dynamic>?;
+          } else if (responseData.containsKey('schedule')) {
+            schedule = responseData['schedule'] as Map<String, dynamic>?;
+          } else if (responseData.containsKey('layout')) {
+            schedule = responseData;
+          }
+        }
+
+        if (schedule == null) {
+          setState(() {
+            _error = "No content scheduled";
+            _isLoading = false;
+          });
+          return;
+        }
+
         // 1. Parse Layout
-        final layout = LayoutConfig.fromJson(data['layout']);
+        final layout = LayoutConfig.fromJson(schedule['layout'] as Map<String, dynamic>);
         
         // 2. Parse and Save Playlists to Isar
         List<PlaylistContent> allContents = [];
-        final playlists = data['playlists'] as Map<String, dynamic>;
+        final regionsData = schedule['regionsData'] as Map<String, dynamic>? ?? {};
         
-        playlists.forEach((regionId, list) {
-          int order = 0;
-          for (var item in (list as List)) {
-            allContents.add(PlaylistContent(
-              contentId: item['id'],
-              url: item['url'],
-              type: item['type'],
-              durationSeconds: item['duration'],
-              regionId: regionId,
-              order: order++,
-            ));
+        regionsData.forEach((regionId, regionObj) {
+          if (regionObj is Map<String, dynamic> && regionObj.containsKey('items')) {
+            final list = regionObj['items'] as List? ?? [];
+            int order = 0;
+            for (var item in list) {
+              allContents.add(PlaylistContent(
+                contentId: item['contentId']?.toString() ?? '',
+                url: item['url']?.toString() ?? '',
+                type: item['contentType']?.toString() ?? 'image',
+                durationSeconds: (item['durationSeconds'] as num?)?.toInt() ?? 30,
+                regionId: regionId,
+                order: order++,
+              ));
+            }
           }
         });
 
