@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
 class MockApiInterceptor extends Interceptor {
+  static int _initCallCount = 0;
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     // Simulate network delay
@@ -80,18 +82,40 @@ class MockApiInterceptor extends Interceptor {
         );
       }
 
-      // Default automatic pairing PIN code response (original behavior)
-      return handler.resolve(
-        Response(
-          requestOptions: options,
-          data: {
-            'screenId': 'SCREEN-12345',
-            'screenToken': 'mock-jwt-token-xyz-789',
-            'pairingCode': 'A794CZ',
-          },
-          statusCode: 200,
-        ),
-      );
+      // Default automatic pairing PIN code response (simulates pairing after 2 poll attempts)
+      _initCallCount++;
+
+      if (_initCallCount < 3) {
+        return handler.resolve(
+          Response(
+            requestOptions: options,
+            data: {
+              'success': true,
+              'data': {
+                'paired': false,
+                'pairingCode': 'A794CZ',
+              }
+            },
+            statusCode: 200,
+          ),
+        );
+      } else {
+        return handler.resolve(
+          Response(
+            requestOptions: options,
+            data: {
+              'success': true,
+              'data': {
+                'paired': true,
+                'screenId': 'SCREEN-12345',
+                'screenToken': 'mock-jwt-token-xyz-789',
+                'pairingCode': 'A794CZ',
+              }
+            },
+            statusCode: 200,
+          ),
+        );
+      }
     }
 
     if (path.contains('/android/screens/') && path.contains('/content')) {

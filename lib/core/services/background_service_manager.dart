@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'device_info_service.dart';
 import '../network/dio_client.dart';
 
+@pragma('vm:entry-point')
 class BackgroundServiceManager {
   static Future<void> initializeService() async {
     if (kIsWeb) {
