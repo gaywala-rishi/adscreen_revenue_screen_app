@@ -285,102 +285,207 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   }
 
   Widget _buildUnregisteredView() {
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.size.width > mediaQuery.size.height;
+
     return SingleChildScrollView(
       physics: const ClampingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _isManualMode ? Icons.vpn_key_outlined : Icons.lock_outline, 
-              color: _isManualMode ? Colors.cyanAccent : Colors.blueAccent, 
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isManualMode ? 'Enterprise Association' : 'AdScreen Board Unregistered',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+        child: isLandscape ? _buildLandscapeLayout() : _buildPortraitLayout(),
+      ),
+    );
+  }
+
+  Widget _buildLandscapeLayout() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Left Column: Branding, info, and action buttons
+        Expanded(
+          flex: 5,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _isManualMode ? Icons.vpn_key_outlined : Icons.lock_outline, 
+                    color: _isManualMode ? Colors.cyanAccent : Colors.blueAccent, 
+                    size: 36,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _isManualMode ? 'Enterprise Association' : 'AdScreen Unregistered',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
+              const SizedBox(height: 12),
+              Text(
                 _isManualMode
                     ? 'Input the verification tokens provided from your administrative dashboard to register this device.'
                     : 'Pair this display to your AdScreen administrative cloud to start fullscreen broadcasting.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey, fontSize: 14, height: 1.4),
+                style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
               ),
-            ),
-            const SizedBox(height: 24),
-            _isManualMode ? _buildManualForm() : _buildPinBox(),
-            const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!_isManualMode) ...[
+              const SizedBox(height: 20),
+              // Action buttons column
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!_isManualMode) ...[
+                    TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isManualMode = true;
+                          _error = null;
+                        });
+                      },
+                      icon: const Icon(Icons.settings, color: Colors.cyanAccent, size: 14),
+                      label: const Text(
+                        'Switch to Enterprise Provisioning',
+                        style: TextStyle(color: Colors.cyanAccent, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.cyanAccent.withValues(alpha: 0.05),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   TextButton.icon(
                     onPressed: () {
-                      setState(() {
-                        _isManualMode = true;
-                        _error = null;
-                      });
+                       Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+                      );
                     },
-                    icon: const Icon(Icons.settings, color: Colors.cyanAccent, size: 16),
+                    icon: const Icon(Icons.close, color: Colors.white54, size: 14),
                     label: const Text(
-                      'Switch to Enterprise Provisioning',
-                      style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.w600),
+                      'Exit to Dashboard',
+                      style: TextStyle(color: Colors.white54, fontSize: 13),
                     ),
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.cyanAccent.withValues(alpha: 0.05),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      backgroundColor: Colors.black26,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
                   ),
-                  const SizedBox(width: 16),
                 ],
-                TextButton.icon(
-                  onPressed: () {
-                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.close, color: Colors.white54, size: 18),
-                  label: const Text(
-                    'Exit to Dashboard',
-                    style: TextStyle(color: Colors.white54, fontSize: 14),
-                  ),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.black26,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 32),
+        // Right Column: Form or PIN Box
+        Expanded(
+          flex: 6,
+          child: Center(
+            child: _isManualMode ? _buildManualForm() : _buildPinBox(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortraitLayout() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          _isManualMode ? Icons.vpn_key_outlined : Icons.lock_outline, 
+          color: _isManualMode ? Colors.cyanAccent : Colors.blueAccent, 
+          size: 40,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _isManualMode ? 'Enterprise Association' : 'AdScreen Board Unregistered',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            _isManualMode
+                ? 'Input the verification tokens provided from your administrative dashboard to register this device.'
+                : 'Pair this display to your AdScreen administrative cloud to start fullscreen broadcasting.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.3),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _isManualMode ? _buildManualForm() : _buildPinBox(),
+        const SizedBox(height: 20),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (!_isManualMode) ...[
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isManualMode = true;
+                    _error = null;
+                  });
+                },
+                icon: const Icon(Icons.settings, color: Colors.cyanAccent, size: 14),
+                label: const Text(
+                  'Switch to Enterprise Provisioning',
+                  style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.w600, fontSize: 12),
                 ),
-              ],
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.cyanAccent.withValues(alpha: 0.05),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            TextButton.icon(
+              onPressed: () {
+                 Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+                );
+              },
+              icon: const Icon(Icons.close, color: Colors.white54, size: 14),
+              label: const Text(
+                'Exit to Dashboard',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.black26,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildManualForm() {
     return Container(
-      width: 450,
-      padding: const EdgeInsets.all(20),
+      constraints: const BoxConstraints(maxWidth: 400),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white10),
         boxShadow: [
           BoxShadow(
             color: Colors.cyanAccent.withValues(alpha: 0.05),
-            blurRadius: 20,
-            spreadRadius: 2,
+            blurRadius: 16,
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -390,13 +495,13 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.vpn_key_outlined, color: Colors.cyanAccent, size: 20),
-              SizedBox(width: 10),
+              Icon(Icons.vpn_key_outlined, color: Colors.cyanAccent, size: 16),
+              SizedBox(width: 8),
               Text(
                 'ENTERPRISE PROVISIONING',
                 style: TextStyle(
                   color: Colors.cyanAccent,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.0,
                 ),
@@ -404,9 +509,9 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
             ],
           ),
           if (_error != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.redAccent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -414,71 +519,71 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 14),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 11),
                     ),
                   ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           TextField(
             controller: _tokenController,
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'monospace'),
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
             decoration: InputDecoration(
               labelText: 'Provisioning Token',
-              labelStyle: const TextStyle(color: Colors.cyanAccent, fontSize: 12),
-              hintText: 'Enter token (e.g. EXPIRED, INVALID)...',
-              hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
+              labelStyle: const TextStyle(color: Colors.cyanAccent, fontSize: 11),
+              hintText: 'Enter token...',
+              hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
               filled: true,
               fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.white10),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.white10),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _venueIdController,
+            style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'monospace'),
+            decoration: InputDecoration(
+              labelText: 'Target Venue ID',
+              labelStyle: const TextStyle(color: Colors.cyanAccent, fontSize: 11),
+              hintText: 'Enter Venue UUID...',
+              hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
+              filled: true,
+              fillColor: Colors.black26,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.white10),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _venueIdController,
-            style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'monospace'),
-            decoration: InputDecoration(
-              labelText: 'Target Venue ID',
-              labelStyle: const TextStyle(color: Colors.cyanAccent, fontSize: 12),
-              hintText: 'Enter target Venue UUID...',
-              hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.white10),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.white10),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Colors.cyanAccent, width: 1.5),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(
@@ -491,25 +596,25 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('Back to PIN', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  child: const Text('Back', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton(
                   onPressed: _registerManually,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.cyanAccent,
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    elevation: 5,
-                    shadowColor: Colors.cyanAccent.withValues(alpha: 0.3),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 3,
+                    shadowColor: Colors.cyanAccent.withValues(alpha: 0.2),
                   ),
-                  child: const Text('REGISTER SCREEN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  child: const Text('REGISTER', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 ),
               ),
             ],
@@ -525,11 +630,11 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     final bool hasExpired = _timeRemaining.isNegative || _timeRemaining == Duration.zero;
 
     return Container(
-      width: 450,
-      padding: const EdgeInsets.all(24),
+      constraints: const BoxConstraints(maxWidth: 400),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasExpired 
               ? Colors.redAccent.withValues(alpha: 0.5) 
@@ -540,8 +645,8 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
             color: hasExpired
                 ? Colors.redAccent.withValues(alpha: 0.05)
                 : Colors.blueAccent.withValues(alpha: 0.05),
-            blurRadius: 20,
-            spreadRadius: 2,
+            blurRadius: 16,
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -554,35 +659,35 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
               Icon(
                 hasExpired ? Icons.warning_amber_rounded : Icons.monitor,
                 color: hasExpired ? Colors.redAccent : Colors.blueAccent,
-                size: 24,
+                size: 20,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Text(
                 hasExpired ? 'PAIRING PIN EXPIRED' : 'PAIRING PIN CODE',
                 style: TextStyle(
                   color: hasExpired ? Colors.redAccent : Colors.blueAccent,
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.0,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             _pairingCode ?? '--- ---',
             style: TextStyle(
               color: hasExpired ? Colors.white30 : Colors.white,
-              fontSize: 54,
+              fontSize: 48,
               fontWeight: FontWeight.bold,
-              letterSpacing: 4,
+              letterSpacing: 3,
               fontFamily: 'monospace',
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           if (!hasExpired && _pairingCode != null) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(30),
@@ -590,13 +695,13 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.timer_outlined, color: Colors.grey, size: 14),
+                  const Icon(Icons.timer_outlined, color: Colors.grey, size: 12),
                   const SizedBox(width: 6),
                   Text(
                     'Expires in $minutes:$seconds',
                     style: const TextStyle(
                       color: Colors.grey,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -608,17 +713,17 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 SizedBox(
-                  width: 12,
-                  height: 12,
+                  width: 10,
+                  height: 10,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 6),
                 Text(
                   'Generating fresh code...',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                  style: TextStyle(color: Colors.redAccent, fontSize: 11),
                 ),
               ],
             ),
