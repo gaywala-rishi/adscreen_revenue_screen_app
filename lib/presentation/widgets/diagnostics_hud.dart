@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../core/services/device_info_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../data/local/isar_database_manager.dart';
+import '../../data/local/metrics_buffer_manager.dart';
+import '../../core/services/playlist_update_notifier.dart';
+import '../../domain/models/content_play_log.dart';
+import '../../domain/models/playlist_content.dart';
 import '../screens/provisioning_screen.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/services/socket_service.dart';
@@ -20,6 +25,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   late TabController _tabController;
   final _deviceInfo = DeviceInfoService();
   Timer? _vitalsTimer;
+  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
   
   String _serial = 'Loading...';
   String _uuid = 'Loading...';
@@ -29,6 +35,11 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   int _bufferedOffline = 0;
   final int _syncedCloud = 0;
   int _cachedSchedules = 0;
+  List<PlaylistContent> _cachedPlaylists = [];
+  List<ContentPlayLog> _pendingLogs = [];
+
+  bool _isSyncing = false;
+  ConnectivityResult _connectivityResult = ConnectivityResult.none;
 
   @override
   void initState() {
@@ -36,6 +47,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     _tabController = TabController(length: 4, vsync: this);
     _loadStaticInfo();
     _startVitalsLoop();
+    _initConnectivity();
   }
 
   Future<void> _loadStaticInfo() async {
@@ -52,7 +64,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         _uuid = screenId;
         _os = vitals['platform'];
         _bufferedOffline = pending.length;
+        _pendingLogs = pending.take(20).toList();
         _cachedSchedules = allContents.length;
+        _cachedPlaylists = allContents;
         _vitals = vitals;
       });
     }
@@ -61,20 +75,179 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   void _startVitalsLoop() {
     _vitalsTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       final vitals = await _deviceInfo.getVitals();
+      final pending = await IsarDatabaseManager.getPendingLogs(1000);
+      final allContents = await IsarDatabaseManager.getAllContents();
       if (mounted) {
         setState(() {
           _vitals = vitals;
           _os = vitals['platform'];
+          _bufferedOffline = pending.length;
+          _pendingLogs = pending.take(20).toList();
+          _cachedSchedules = allContents.length;
+          _cachedPlaylists = allContents;
         });
       }
     });
+  }
+
+  Future<void> _initConnectivity() async {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+      if (mounted) {
+        final wasOffline = _connectivityResult == ConnectivityResult.none;
+        setState(() {
+          _connectivityResult = result;
+        });
+        if (wasOffline && result != ConnectivityResult.none) {
+          debugPrint('[DiagnosticsHUD] Connectivity restored to $result. Syncing buffered data.');
+          _syncAllData();
+        }
+      }
+    });
+
+    try {
+      final result = await Connectivity().checkConnectivity();
+      if (mounted) {
+        setState(() {
+          _connectivityResult = result;
+        });
+      }
+    } catch (e) {
+      debugPrint('[DiagnosticsHUD] Connectivity check failed: $e');
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _vitalsTimer?.cancel();
+    _connectivitySubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _syncAllData() async {
+    if (_isSyncing) return;
+    if (_connectivityResult == ConnectivityResult.none) {
+      debugPrint('[DiagnosticsHUD] Sync skipped: Network is offline');
+      return;
+    }
+
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      // 1. Sync pending metrics to backend
+      final metricsManager = MetricsBufferManager();
+      await metricsManager.syncMetrics();
+
+      // 2. Fetch campaign metadata from backend
+      final secureStorage = SecureStorageService();
+      final isPaired = await secureStorage.hasCredentials();
+      if (isPaired) {
+        final response = await DioClient().dio.get('/android/screens/MOCK-ID/content');
+        if (response.statusCode == 200) {
+          final responseData = response.data;
+          if (responseData is Map<String, dynamic>) {
+            await secureStorage.saveCachedLayout(responseData);
+
+            // Extract schedule data
+            Map<String, dynamic>? schedule;
+            if (responseData.containsKey('data') && responseData['data'] is Map<String, dynamic> && responseData['data'].containsKey('schedule')) {
+              schedule = responseData['data']['schedule'] as Map<String, dynamic>?;
+            } else if (responseData.containsKey('schedule')) {
+              schedule = responseData['schedule'] as Map<String, dynamic>?;
+            } else if (responseData.containsKey('layout')) {
+              schedule = responseData;
+            }
+
+            if (schedule != null) {
+              // 3. Save layout configuration & playlists
+              final existingContents = await IsarDatabaseManager.getAllContents();
+              final existingMap = {for (var c in existingContents) c.contentId: c};
+
+              List<PlaylistContent> allContents = [];
+              final regionsData = schedule['regionsData'] as Map<String, dynamic>? ?? {};
+
+              regionsData.forEach((regionId, regionObj) {
+                if (regionObj is Map<String, dynamic> && regionObj.containsKey('items')) {
+                  final list = regionObj['items'] as List? ?? [];
+                  int order = 0;
+                  for (var item in list) {
+                    final contentId = item['contentId']?.toString() ?? '';
+                    final existing = existingMap[contentId];
+
+                    // Mock asset download simulation (marking isDownloaded = true and localPath = mock storage location)
+                    final isDownloaded = existing?.isDownloaded ?? true; // Default to true for simulated local download
+                    final localPath = existing?.localPath ?? 'assets/cache/downloads/content_$contentId.bin';
+
+                    allContents.add(PlaylistContent(
+                      contentId: contentId,
+                      url: item['url']?.toString() ?? '',
+                      type: item['contentType']?.toString() ?? 'image',
+                      durationSeconds: (item['durationSeconds'] as num?)?.toInt() ?? 30,
+                      regionId: regionId,
+                      order: order++,
+                      isDownloaded: isDownloaded,
+                      localPath: localPath,
+                    ));
+                  }
+                }
+              });
+
+              // Write to Isar
+              await IsarDatabaseManager.updatePlaylist(allContents);
+              PlaylistUpdateNotifier.notify();
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[DiagnosticsHUD] Sync error: $e');
+    } finally {
+      await _loadStaticInfo(); // Reload display lists and counts
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _triggerCampaignDiff() async {
+    final contents = await IsarDatabaseManager.getAllContents();
+    const mockCampaignId = 'MOCK-CAMPAIGN-AD';
+    final hasMock = contents.any((c) => c.contentId == mockCampaignId);
+
+    List<PlaylistContent> updatedContents = [];
+    if (hasMock) {
+      // Remove mock campaign
+      updatedContents = contents.where((c) => c.contentId != mockCampaignId).toList();
+      debugPrint('[DiagnosticsHUD] Campaign Diff: Removed mock campaign item');
+    } else {
+      // Add mock campaign at the beginning of 'AD_1'
+      // Shift orders of other items in 'AD_1'
+      for (var c in contents) {
+        if (c.regionId == 'AD_1') {
+          c.order += 1;
+        }
+        updatedContents.add(c);
+      }
+      updatedContents.add(PlaylistContent(
+        contentId: mockCampaignId,
+        url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        type: 'video',
+        durationSeconds: 15,
+        regionId: 'AD_1',
+        order: 0,
+        isDownloaded: true,
+        localPath: 'assets/cache/downloads/mock_campaign.mp4',
+      ));
+      debugPrint('[DiagnosticsHUD] Campaign Diff: Injected mock campaign item');
+    }
+
+    await IsarDatabaseManager.updatePlaylist(updatedContents);
+    PlaylistUpdateNotifier.notify();
+    await _loadStaticInfo(); // Reload the playlist state in HUD
   }
 
   @override
@@ -152,9 +325,28 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               ),
             ],
           ),
-          IconButton(
-            onPressed: widget.onClose,
-            icon: const Icon(Icons.refresh, color: Colors.white54),
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Sync Offline Data',
+                onPressed: _isSyncing ? null : _syncAllData,
+                icon: _isSyncing 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.cyanAccent),
+                      )
+                    : const Icon(Icons.sync, color: Colors.cyanAccent),
+              ),
+              if (!widget.isEmbedded) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Close Diagnostics',
+                  onPressed: widget.onClose,
+                  icon: const Icon(Icons.close, color: Colors.white54),
+                ),
+              ],
+            ],
           ),
         ],
       ),
@@ -260,16 +452,122 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           const SizedBox(height: 24),
           Row(
             children: [
-              _buildActionButton(Icons.sync, 'Trigger Campaign Diff'),
+              _buildCampaignDiffButton(),
               const SizedBox(width: 16),
-              _buildActionButton(Icons.wifi, 'Simulate WiFi Restored', color: Colors.pinkAccent),
+              _buildConnectionStatusCard(),
             ],
           ),
           const SizedBox(height: 32),
-          Text('SQLITE ROOM CACHED SCHEDULES ($_cachedSchedules ACTIVE)', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
+          Text('ROOM DATABASE CACHED CAMPAIGN CONTENT ($_cachedSchedules ITEMS)', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          _buildScheduleItem('Premium Roast Latte Promo', 'Cafe Venue', '6s', isPlaying: true),
+          if (_cachedPlaylists.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24.0),
+              child: Center(
+                child: Text(
+                  'No cached offline playlist content in Isar.',
+                  style: TextStyle(color: Colors.white30, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            ..._cachedPlaylists.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: _buildScheduleItem(
+                c.contentId == 'MOCK-CAMPAIGN-AD' ? '🔥 Campaign Diff: Special Promo' : 'Playout Ad Content ${c.contentId}',
+                c.type.toUpperCase(),
+                '${c.durationSeconds}s',
+                regionId: c.regionId,
+                localPath: c.localPath,
+                isDownloaded: c.isDownloaded,
+              ),
+            )),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCampaignDiffButton() {
+    final hasMock = _cachedPlaylists.any((c) => c.contentId == 'MOCK-CAMPAIGN-AD');
+    final color = hasMock ? Colors.orangeAccent : Colors.cyanAccent;
+    final text = hasMock ? 'Campaign Target ON' : 'Campaign Target OFF';
+
+    return Expanded(
+      child: InkWell(
+        onTap: _triggerCampaignDiff,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.campaign, color: color, size: 20),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  text,
+                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionStatusCard() {
+    IconData icon;
+    String text;
+    Color color;
+
+    switch (_connectivityResult) {
+      case ConnectivityResult.wifi:
+        icon = Icons.wifi;
+        text = 'WiFi Connected';
+        color = Colors.greenAccent;
+        break;
+      case ConnectivityResult.ethernet:
+        icon = Icons.lan;
+        text = 'Ethernet Connected';
+        color = Colors.greenAccent;
+        break;
+      case ConnectivityResult.none:
+      default:
+        icon = Icons.signal_wifi_off;
+        text = 'Network Disconnected';
+        color = Colors.redAccent;
+        break;
+    }
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                text,
+                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -319,6 +617,51 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           ),
           const SizedBox(height: 24),
           Text('ROOM DATABASE PLAY TRACKS Log: \'ad_impressions\'', style: TextStyle(color: Colors.blueAccent.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          if (_pendingLogs.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24.0),
+              child: Center(
+                child: Text(
+                  'No pending offline play logs in Isar.',
+                  style: TextStyle(color: Colors.white30, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            ..._pendingLogs.map((log) => Padding(
+              padding: const EdgeInsets.only(bottom: 10.0),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Content ID: ${log.contentId}',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Region: ${log.layoutRegionId} | Played At: ${log.playedAt.toLocal().toString().split('.').first}',
+                            style: const TextStyle(color: Colors.white38, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Text('BUFFERED', style: TextStyle(color: Colors.orangeAccent, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            )),
         ],
       ),
     );
@@ -412,34 +755,20 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, {Color color = Colors.white10}) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: color == Colors.white10 ? color : color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color == Colors.white10 ? Colors.white10 : color.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color == Colors.white10 ? Colors.white54 : color, size: 16),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(color: color == Colors.white10 ? Colors.white54 : color, fontSize: 13, fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildScheduleItem(String title, String category, String duration, {bool isPlaying = false}) {
+  Widget _buildScheduleItem(
+    String title,
+    String category,
+    String duration, {
+    required String regionId,
+    String? localPath,
+    required bool isDownloaded,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isPlaying ? Colors.cyanAccent.withValues(alpha: 0.5) : Colors.white10),
+        border: Border.all(color: isDownloaded ? Colors.cyanAccent.withValues(alpha: 0.15) : Colors.white10),
       ),
       child: Row(
         children: [
@@ -448,19 +777,39 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('Category: $category | Duration: $duration', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                const SizedBox(height: 6),
+                Text(
+                  'Region: $regionId | Type: $category | Duration: $duration', 
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+                if (localPath != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Local: $localPath',
+                    style: const TextStyle(color: Colors.white30, fontSize: 9, fontFamily: 'monospace'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
-          if (isPlaying)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: Colors.cyanAccent, borderRadius: BorderRadius.circular(4)),
-              child: const Text('PLAYING NOW', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-            ),
           const SizedBox(width: 12),
-          const Text('CACHED', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: isDownloaded ? Colors.green.withValues(alpha: 0.2) : Colors.orange.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: isDownloaded ? Colors.green : Colors.orange, width: 0.5),
+            ),
+            child: Text(
+              isDownloaded ? 'CACHED' : 'PENDING',
+              style: TextStyle(
+                color: isDownloaded ? Colors.greenAccent : Colors.orangeAccent,
+                fontSize: 9,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
