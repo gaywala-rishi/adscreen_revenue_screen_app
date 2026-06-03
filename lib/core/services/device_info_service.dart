@@ -8,6 +8,9 @@ class DeviceInfoService {
   final Battery _battery = Battery();
   final Random _random = Random();
 
+  static Map<String, dynamic>? _cachedVitals;
+  static DateTime? _lastFetchTime;
+
   Future<String> getSerialNumber() async {
     try {
       if (Platform.isAndroid) {
@@ -37,26 +40,33 @@ class DeviceInfoService {
   }
 
   Future<Map<String, dynamic>> getVitals() async {
+    final now = DateTime.now();
+    if (_cachedVitals != null && _lastFetchTime != null && now.difference(_lastFetchTime!).inMilliseconds < 1500) {
+      return _cachedVitals!;
+    }
+
     final batteryLevel = await _battery.batteryLevel;
     
     // Improved simulation for realistic movement
-    final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    final double timeSeconds = now.millisecondsSinceEpoch / 1000.0;
     const double cpuBase = 0.10;
-    final double cpuVariation = 0.05 * sin(now / 5.0) + (_random.nextDouble() * 0.02);
+    final double cpuVariation = 0.05 * sin(timeSeconds / 5.0) + (_random.nextDouble() * 0.02);
     final double cpuLoad = (cpuBase + cpuVariation).clamp(0.02, 0.95);
     
     const double tempBase = 36.0;
-    final double tempVariation = 2.0 * sin(now / 10.0) + (_random.nextDouble() * 0.5);
+    final double tempVariation = 2.0 * sin(timeSeconds / 10.0) + (_random.nextDouble() * 0.5);
     final double temp = (tempBase + tempVariation).clamp(30.0, 45.0);
     
-    return {
+    _cachedVitals = {
       'platform': Platform.isAndroid ? 'Android ${Platform.operatingSystemVersion}' : Platform.operatingSystem,
       'os_version': Platform.operatingSystemVersion,
       'battery_level': batteryLevel,
       'cpu_load': cpuLoad,
       'temperature': temp,
-      'ram_usage': 0.48 + (0.02 * cos(now / 7.0)) + (_random.nextDouble() * 0.01),
-      'timestamp': DateTime.now().toIso8601String(),
+      'ram_usage': 0.48 + (0.02 * cos(timeSeconds / 7.0)) + (_random.nextDouble() * 0.01),
+      'timestamp': now.toIso8601String(),
     };
+    _lastFetchTime = now;
+    return _cachedVitals!;
   }
 }
