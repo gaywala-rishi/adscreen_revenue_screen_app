@@ -4,11 +4,11 @@ import 'mock_api_interceptor.dart';
 class DioClient {
   late Dio _dio;
 
-  // Static toggle to easily switch between mock environment and live backend APIs
-  static bool useMock = true;
+  // Environment-based toggle to switch between mock and live backend APIs
+  static const bool useMock = bool.fromEnvironment('USE_MOCK', defaultValue: true);
 
-  // Custom base URL configuration (points to Nest/Express backend versioned endpoints)
-  static String activeBaseUrl = 'https://api.adscreen.in/api/v1';
+  // Environment-based backend URL configuration (configured dynamically via env.json)
+  static const String activeBaseUrl = String.fromEnvironment('BACKEND_URL', defaultValue: 'https://api.adscreen.in/api/v1');
 
   DioClient() {
     _dio = Dio(

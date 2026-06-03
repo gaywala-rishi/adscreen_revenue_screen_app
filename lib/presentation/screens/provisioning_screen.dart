@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'control_console_screen.dart';
 import '../../core/services/secure_storage_service.dart';
@@ -26,6 +27,9 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   final _tokenController = TextEditingController();
   final _venueIdController = TextEditingController();
 
+  // Background PIN pairing timer
+  Timer? _pairingTimer;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +40,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   void dispose() {
     _tokenController.dispose();
     _venueIdController.dispose();
+    _pairingTimer?.cancel();
     super.dispose();
   }
 
@@ -44,6 +49,8 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
       _isLoading = true;
       _error = null;
     });
+
+    _pairingTimer?.cancel();
 
     try {
       _serialNumber = await _deviceInfo.getSerialNumber();
@@ -54,19 +61,43 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data;
-        setState(() {
-          _pairingCode = data['pairingCode'] ?? '482-991'; // Mock fallback to match design
-          _isLoading = false;
-        });
+        final Map<String, dynamic> responseData = response.data;
+        
+        // Handle standard backend nesting structure: { success: true, data: { ... } }
+        final Map<String, dynamic> bodyData = responseData.containsKey('data') 
+            ? (responseData['data'] as Map<String, dynamic>? ?? {}) 
+            : responseData;
 
-        await _secureStorage.saveScreenCredentials(
-          data['screenId'],
-          data['screenToken'],
-        );
+        final bool isPaired = bodyData['paired'] == true || 
+            (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
+
+        if (isPaired) {
+          setState(() {
+            _isLoading = false;
+          });
+          
+          await _secureStorage.saveScreenCredentials(
+            bodyData['screenId'].toString(),
+            bodyData['screenToken'].toString(),
+          );
+
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+            );
+          }
+        } else {
+          // Screen is not paired yet. Show PIN and start polling loop.
+          setState(() {
+            _pairingCode = bodyData['pairingCode']?.toString() ?? '--- ---';
+            _isLoading = false;
+          });
+          
+          _startPairingPoll();
+        }
       } else {
         setState(() {
-          _error = 'Failed to get pairing code';
+          _error = 'Failed to initialize screen registration';
           _isLoading = false;
         });
       }
@@ -75,6 +106,65 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  void _startPairingPoll() {
+    _pairingTimer?.cancel();
+    _pairingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+      await _checkPairingStatus();
+    });
+  }
+
+  Future<void> _checkPairingStatus() async {
+    if (_serialNumber == null) return;
+    
+    try {
+      final response = await _dioClient.dio.post(
+        '/android/screens/init',
+        data: {'serialNumber': _serialNumber},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = response.data;
+        final Map<String, dynamic> bodyData = responseData.containsKey('data') 
+            ? (responseData['data'] as Map<String, dynamic>? ?? {}) 
+            : responseData;
+
+        final bool isPaired = bodyData['paired'] == true || 
+            (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
+
+        if (isPaired) {
+          _pairingTimer?.cancel();
+          
+          await _secureStorage.saveScreenCredentials(
+            bodyData['screenId'].toString(),
+            bodyData['screenToken'].toString(),
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Screen successfully paired and activated!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+            );
+          }
+        } else {
+          // If pairingCode changes (e.g. expired and regenerated), update it
+          final newCode = bodyData['pairingCode']?.toString();
+          if (newCode != null && newCode != _pairingCode) {
+            setState(() {
+              _pairingCode = newCode;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Pairing poll check failed: $e');
     }
   }
 
