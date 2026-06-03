@@ -4,6 +4,7 @@ import 'control_console_screen.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../core/services/device_info_service.dart';
 import '../../core/network/dio_client.dart';
+import '../../core/services/socket_service.dart';
 
 class ProvisioningScreen extends StatefulWidget {
   const ProvisioningScreen({super.key});
@@ -16,6 +17,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   final _dioClient = DioClient();
   final _secureStorage = SecureStorageService();
   final _deviceInfo = DeviceInfoService();
+  final _socketService = SocketService();
 
   String? _pairingCode;
   String? _serialNumber;
@@ -41,6 +43,7 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     _tokenController.dispose();
     _venueIdController.dispose();
     _pairingTimer?.cancel();
+    _socketService.dispose();
     super.dispose();
   }
 
@@ -118,68 +121,28 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   }
 
   void _startPairingPoll() {
-    debugPrint('[ProvisioningScreen] Starting background pairing poll every 5s...');
-    _pairingTimer?.cancel();
-    _pairingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      await _checkPairingStatus();
-    });
-  }
-
-  Future<void> _checkPairingStatus() async {
+    debugPrint('[ProvisioningScreen] Subscribing to pairing WebSocket instead of HTTP polling...');
     if (_serialNumber == null) return;
-    
-    debugPrint('[ProvisioningScreen] Polling pairing status for serial: $_serialNumber');
-    try {
-      final response = await _dioClient.dio.post(
-        '/android/screens/init',
-        data: {'serialNumber': _serialNumber},
-      );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = response.data;
-        final Map<String, dynamic> bodyData = responseData.containsKey('data') 
-            ? (responseData['data'] as Map<String, dynamic>? ?? {}) 
-            : responseData;
+    _socketService.initPairingSocket(
+      serialNumber: _serialNumber!,
+      onPaired: (screenId, token) async {
+        debugPrint('[ProvisioningScreen] Success! Pairing completed via WebSocket.');
+        await _secureStorage.saveScreenCredentials(screenId, token);
 
-        final bool isPaired = bodyData['paired'] == true || 
-            (bodyData.containsKey('screenToken') && bodyData['screenToken'] != null && bodyData['screenToken'].toString().isNotEmpty);
-
-        debugPrint('[ProvisioningScreen] Polling status check: isPaired=$isPaired');
-
-        if (isPaired) {
-          final screenId = bodyData['screenId'].toString();
-          final screenToken = bodyData['screenToken'].toString();
-          debugPrint('[ProvisioningScreen] SUCCESS! Screen successfully paired on server. Saving credentials - ID: $screenId');
-          
-          _pairingTimer?.cancel();
-          
-          await _secureStorage.saveScreenCredentials(screenId, screenToken);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Screen successfully paired and activated!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
-            );
-          }
-        } else {
-          // If pairingCode changes (e.g. expired and regenerated), update it
-          final newCode = bodyData['pairingCode']?.toString();
-          if (newCode != null && newCode != _pairingCode) {
-            debugPrint('[ProvisioningScreen] Pairing PIN updated: $newCode');
-            setState(() {
-              _pairingCode = newCode;
-            });
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Screen successfully paired and activated!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+          );
         }
-      }
-    } catch (e) {
-      debugPrint('[ProvisioningScreen] Pairing poll check failed: $e');
-    }
+      },
+    );
   }
 
   Future<void> _registerManually() async {

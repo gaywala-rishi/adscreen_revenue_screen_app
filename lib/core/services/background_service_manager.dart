@@ -4,7 +4,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'device_info_service.dart';
-import '../network/dio_client.dart';
+import 'secure_storage_service.dart';
+import 'socket_service.dart';
 
 @pragma('vm:entry-point')
 class BackgroundServiceManager {
@@ -44,8 +45,8 @@ class BackgroundServiceManager {
   static void onStart(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
-    final dioClient = DioClient();
     final deviceInfo = DeviceInfoService();
+    final socketService = SocketService();
 
     if (service is AndroidServiceInstance) {
       service.on('setAsForeground').listen((event) {
@@ -61,23 +62,36 @@ class BackgroundServiceManager {
       service.stopSelf();
     });
 
-    // Heartbeat Loop
+    // Heartbeat Loop using WebSockets
     Timer.periodic(const Duration(seconds: 60), (timer) async {
       if (service is AndroidServiceInstance) {
         if (await service.isForegroundService()) {
           final vitals = await deviceInfo.getVitals();
           
           try {
-            await dioClient.dio.post(
-              '/android/screens/MOCK-ID/heartbeat',
-              data: vitals,
-            );
+            final secureStorage = SecureStorageService();
+            final token = await secureStorage.getScreenToken();
             
-            service.setForegroundNotificationInfo(
-              title: "AdScreen Player [Online]",
-              content: "Last Heartbeat: ${DateTime.now().hour}:${DateTime.now().minute}",
-            );
+            if (token != null) {
+              if (!socketService.isConnected) {
+                debugPrint('[BackgroundService] Socket disconnected. Connecting authenticated socket...');
+                socketService.initAuthenticatedSocket(token: token);
+              }
+              socketService.emitTelemetry(vitals);
+              
+              service.setForegroundNotificationInfo(
+                title: "AdScreen Player [Online]",
+                content: "Last Socket Heartbeat: ${DateTime.now().hour}:${DateTime.now().minute}",
+              );
+            } else {
+              debugPrint('[BackgroundService] No token found in background service. Telemetry skipped.');
+              service.setForegroundNotificationInfo(
+                title: "AdScreen Player [Offline]",
+                content: "Unpaired display - waiting for pairing PIN",
+              );
+            }
           } catch (e) {
+            debugPrint('[BackgroundService] Telemetry loop error: $e');
             service.setForegroundNotificationInfo(
               title: "AdScreen Player [Offline]",
               content: "Sync Error: ${e.toString().split('\n').first}",

@@ -10,6 +10,7 @@ import '../../domain/models/playlist_content.dart';
 import '../../data/local/isar_database_manager.dart';
 import '../widgets/multi_zone_presenter.dart';
 import '../widgets/diagnostics_hud.dart';
+import '../../core/services/socket_service.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -24,6 +25,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _isLoading = true;
   String? _error;
   bool _showHUD = false;
+  bool _isRebooting = false;
 
   @override
   void initState() {
@@ -72,6 +74,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
         await IsarDatabaseManager.updatePlaylist(allContents);
 
+        // Initialize authenticated WebSocket to listen for incoming admin commands (Ping, Sync, Reboot)
+        final token = await secureStorage.getScreenToken();
+        if (token != null) {
+          SocketService().initAuthenticatedSocket(
+            token: token,
+            onSyncCommand: () {
+              debugPrint('[PlayerScreen] WebSocket command: SYNC content');
+              _fetchContent();
+            },
+            onRebootCommand: () {
+              debugPrint('[PlayerScreen] WebSocket command: REBOOT device');
+              _simulateReboot();
+            },
+          );
+        }
+
         setState(() {
           _layout = layout;
           _isLoading = false;
@@ -100,6 +118,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  void _simulateReboot() {
+    setState(() {
+      _isRebooting = true;
+      _isLoading = true;
+      _error = null;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isRebooting = false;
+        });
+        _fetchContent();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    SocketService().dispose();
+    super.dispose();
+  }
+
   void _toggleHUD() {
     setState(() {
       _showHUD = !_showHUD;
@@ -123,7 +164,26 @@ class _PlayerScreenState extends State<PlayerScreen> {
         body: Stack(
           children: [
             _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.cyanAccent),
+                        if (_isRebooting) ...[
+                          const SizedBox(height: 24),
+                          const Text(
+                            'SYSTEM REBOOTING...',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2.0,
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                  )
                 : _error != null
                     ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.white)))
                     : MultiZonePresenter(layout: _layout!),
