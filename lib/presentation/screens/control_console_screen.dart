@@ -129,7 +129,7 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
     final double temp = _vitals?['temperature'] ?? 36.0;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(12),
@@ -141,14 +141,21 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
             height: 8,
             decoration: const BoxDecoration(color: Colors.pinkAccent, shape: BoxShape.circle),
           ),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'FALLBACK OFFLINE PLAYBACK ACTIVE', 
+              style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
           const SizedBox(width: 12),
-          const Text('FALLBACK OFFLINE PLAYBACK ACTIVE', style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-          const Spacer(),
-          _footerStat('CPU LOAD', '${(cpu * 100).toStringAsFixed(1)}%', Colors.blueAccent),
-          const SizedBox(width: 20),
-          _footerStat('RAM USAGE', '${(ram * 100).toStringAsFixed(1)}%', Colors.greenAccent),
-          const SizedBox(width: 20),
-          _footerStat('TEMPERATURE', '${temp.toStringAsFixed(1)}°C', Colors.pinkAccent),
+          _footerStat('CPU', '${(cpu * 100).toStringAsFixed(1)}%', Colors.blueAccent),
+          const SizedBox(width: 12),
+          _footerStat('RAM', '${(ram * 100).toStringAsFixed(1)}%', Colors.greenAccent),
+          const SizedBox(width: 12),
+          _footerStat('TEMP', '${temp.toStringAsFixed(1)}°C', Colors.pinkAccent),
         ],
       ),
     );
