@@ -4,6 +4,8 @@ import '../../core/services/device_info_service.dart';
 import '../../core/services/secure_storage_service.dart';
 import '../../data/local/isar_database_manager.dart';
 import '../screens/provisioning_screen.dart';
+import '../../core/network/dio_client.dart';
+import '../../core/services/socket_service.dart';
 
 class DiagnosticsHUD extends StatefulWidget {
   final VoidCallback onClose;
@@ -199,8 +201,32 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             child: ElevatedButton.icon(
               onPressed: () async {
                 final secureStorage = SecureStorageService();
+                
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(color: Colors.cyanAccent),
+                  ),
+                );
+
+                try {
+                  final dioClient = DioClient();
+                  await dioClient.dio.post('/android/screens/MOCK-ID/reset');
+                } catch (e) {
+                  debugPrint('Failed to notify backend on screen reset: $e');
+                }
+
+                // Disconnect WebSocket
+                SocketService().dispose();
+
                 await secureStorage.clearCredentials();
+
                 if (mounted) {
+                  // Dismiss loading dialog
+                  Navigator.of(context).pop();
+
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
                     (route) => false,

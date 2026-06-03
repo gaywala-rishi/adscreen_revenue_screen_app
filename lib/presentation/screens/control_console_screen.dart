@@ -93,7 +93,6 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                     ],
                   ),
                   const SizedBox(height: 40),
-                  // Mock "Unregistered" preview box inside port
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -101,24 +100,8 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: Colors.white10),
                       ),
-                      child: const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.lock_outline, color: Colors.blueAccent, size: 60),
-                            SizedBox(height: 16),
-                            Text(
-                              'AdScreen Board Unregistered',
-                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'Pair this display to your cloud to start',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: const PlayerScreen(),
                     ),
                   ),
                   const SizedBox(height: 20),

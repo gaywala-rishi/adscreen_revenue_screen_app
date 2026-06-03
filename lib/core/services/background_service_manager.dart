@@ -62,8 +62,8 @@ class BackgroundServiceManager {
       service.stopSelf();
     });
 
-    // Heartbeat Loop using WebSockets
-    Timer.periodic(const Duration(seconds: 60), (timer) async {
+    // Heartbeat Loop using WebSockets - fixed 4-second interval
+    Timer.periodic(const Duration(seconds: 4), (timer) async {
       if (service is AndroidServiceInstance) {
         if (await service.isForegroundService()) {
           final vitals = await deviceInfo.getVitals();
