@@ -21,6 +21,7 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
   int _currentIndex = 0;
   VideoPlayerController? _videoController;
   YoutubePlayerController? _youtubeController;
+  StreamSubscription? _youtubeSubscription;
   Timer? _imageTimer;
   bool _isLoading = true;
 
@@ -88,38 +89,36 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
   }
 
   Future<void> _playYoutube(PlaylistContent content) async {
-    _youtubeController?.dispose();
+    _youtubeSubscription?.cancel();
+    _youtubeSubscription = null;
+    _youtubeController?.close();
     _youtubeController = null;
 
-    final videoId = YoutubePlayer.convertUrlToId(content.url);
+    final videoId = YoutubePlayerController.convertUrlToId(content.url);
     if (videoId == null) {
       debugPrint('Invalid YouTube URL: ${content.url}');
       _next();
       return;
     }
 
-    _youtubeController = YoutubePlayerController(
-      initialVideoId: videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
+    _youtubeController = YoutubePlayerController.fromVideoId(
+      videoId: videoId,
+      autoPlay: true,
+      params: const YoutubePlayerParams(
+        showControls: false,
+        showFullscreenButton: false,
         mute: false,
-        isLive: false,
-        forceHD: false,
-        enableCaption: false,
-        hideControls: true,
       ),
     );
 
-    _youtubeController!.addListener(_youtubeListener);
+    _youtubeSubscription = _youtubeController!.listen((value) {
+      if (value.playerState == PlayerState.ended) {
+        _youtubeSubscription?.cancel();
+        _next();
+      }
+    });
 
     if (mounted) setState(() {});
-  }
-
-  void _youtubeListener() {
-    if (_youtubeController != null && _youtubeController!.value.playerState == PlayerState.ended) {
-      _youtubeController!.removeListener(_youtubeListener);
-      _next();
-    }
   }
 
   void _playImage(PlaylistContent content) {
@@ -148,8 +147,9 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
     _videoController?.dispose();
     _videoController = null;
 
-    _youtubeController?.removeListener(_youtubeListener);
-    _youtubeController?.dispose();
+    _youtubeSubscription?.cancel();
+    _youtubeSubscription = null;
+    _youtubeController?.close();
     _youtubeController = null;
 
     _imageTimer?.cancel();
@@ -165,8 +165,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
   void dispose() {
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
-    _youtubeController?.removeListener(_youtubeListener);
-    _youtubeController?.dispose();
+    _youtubeSubscription?.cancel();
+    _youtubeController?.close();
     _imageTimer?.cancel();
     super.dispose();
   }
@@ -202,7 +202,6 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
       playerWidget = _youtubeController != null
           ? YoutubePlayer(
               controller: _youtubeController!,
-              showVideoProgressIndicator: false,
             )
           : const Center(child: CircularProgressIndicator());
     } else {
