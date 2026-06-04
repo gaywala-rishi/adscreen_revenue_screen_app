@@ -107,6 +107,7 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
       params: const YoutubePlayerParams(
         showControls: false,
         showFullscreenButton: false,
+        playsInline: true,
         mute: false,
       ),
     );
