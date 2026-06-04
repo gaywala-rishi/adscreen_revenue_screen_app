@@ -27,13 +27,13 @@ class SocketService {
     final String baseUrl = DioClient.activeBaseUrl.replaceAll('/api/v1', '');
     debugPrint('[SocketService] Connecting pairing socket to $baseUrl...');
 
-    _socket = io.io(
-      baseUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .disableAutoConnect()
-          .build(),
-    );
+    final options = io.OptionBuilder()
+        .setTransports(['websocket'])
+        .disableAutoConnect()
+        .build();
+    options['forceNew'] = true;
+
+    _socket = io.io(baseUrl, options);
 
     _socket!.onConnect((_) {
       debugPrint('[SocketService] Connected. Emitting join:pairing for device $serialNumber');
@@ -72,15 +72,15 @@ class SocketService {
     final String baseUrl = DioClient.activeBaseUrl.replaceAll('/api/v1', '');
     debugPrint('[SocketService] Connecting authenticated socket to $baseUrl...');
 
-    _socket = io.io(
-      baseUrl,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .setAuth({'token': token})
-          .setQuery({'token': token}) // Query fallback to ensure compatibility
-          .disableAutoConnect()
-          .build(),
-    );
+    final options = io.OptionBuilder()
+        .setTransports(['websocket'])
+        .setAuth({'token': token})
+        .setQuery({'token': token}) // Query fallback to ensure compatibility
+        .disableAutoConnect()
+        .build();
+    options['forceNew'] = true;
+
+    _socket = io.io(baseUrl, options);
 
     _socket!.onConnect((_) {
       debugPrint('[SocketService] Authenticated socket connected.');
