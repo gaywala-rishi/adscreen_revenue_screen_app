@@ -32,8 +32,8 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  isar: ^3.1.0+1
-  isar_flutter_libs: ^3.1.0+1
+  isar_community: ^3.3.2
+  isar_community_flutter_libs: ^3.3.2
   path_provider: ^2.1.2
   flutter_secure_storage: ^9.0.0
   dio: ^5.4.0
@@ -53,7 +53,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  isar_generator: ^3.1.0+1
+  isar_community_generator: ^3.3.2
   build_runner: ^2.4.8
 
 # For information on the generic Dart part of this file, see the

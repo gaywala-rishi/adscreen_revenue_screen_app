@@ -1,8 +1,8 @@
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 part 'isar_schemas.g.dart';
 
-@Collection()
+@collection
 class ScreenConfigSchema {
   Id id = Isar.autoIncrement;
 
@@ -14,7 +14,7 @@ class ScreenConfigSchema {
   int syncIntervalMinutes = 15;
 }
 
-@Collection()
+@collection
 class PlaylistContentSchema {
   Id id = Isar.autoIncrement;
 
@@ -32,7 +32,7 @@ class PlaylistContentSchema {
   int order = 0;
 }
 
-@Collection()
+@collection
 class ContentPlayLogSchema {
   Id id = Isar.autoIncrement;
 
