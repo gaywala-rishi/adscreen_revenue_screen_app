@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../data/local/isar_database_manager.dart';
 import '../../domain/models/playlist_content.dart';
 import '../../domain/models/content_play_log.dart';
@@ -200,8 +200,10 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
           : const Center(child: CircularProgressIndicator());
     } else if (content.type == 'youtube_url') {
       playerWidget = _youtubeController != null
-          ? YoutubePlayer(
-              controller: _youtubeController!,
+          ? IgnorePointer(
+              child: YoutubePlayer(
+                controller: _youtubeController!,
+              ),
             )
           : const Center(child: CircularProgressIndicator());
     } else {
