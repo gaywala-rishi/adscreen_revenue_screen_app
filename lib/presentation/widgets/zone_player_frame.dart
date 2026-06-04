@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../data/local/isar_database_manager.dart';
 import '../../domain/models/playlist_content.dart';
 import '../../domain/models/content_play_log.dart';
@@ -19,6 +20,7 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
   List<PlaylistContent> _playlist = [];
   int _currentIndex = 0;
   VideoPlayerController? _videoController;
+  YoutubePlayerController? _youtubeController;
   Timer? _imageTimer;
   bool _isLoading = true;
 
@@ -48,6 +50,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
     
     if (content.type == 'video') {
       await _playVideo(content);
+    } else if (content.type == 'youtube_url') {
+      await _playYoutube(content);
     } else {
       _playImage(content);
     }
@@ -83,6 +87,41 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
     }
   }
 
+  Future<void> _playYoutube(PlaylistContent content) async {
+    _youtubeController?.dispose();
+    _youtubeController = null;
+
+    final videoId = YoutubePlayer.convertUrlToId(content.url);
+    if (videoId == null) {
+      debugPrint('Invalid YouTube URL: ${content.url}');
+      _next();
+      return;
+    }
+
+    _youtubeController = YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: const YoutubePlayerFlags(
+        autoPlay: true,
+        mute: false,
+        isLive: false,
+        forceHD: false,
+        enableCaption: false,
+        hideControls: true,
+      ),
+    );
+
+    _youtubeController!.addListener(_youtubeListener);
+
+    if (mounted) setState(() {});
+  }
+
+  void _youtubeListener() {
+    if (_youtubeController != null && _youtubeController!.value.playerState == PlayerState.ended) {
+      _youtubeController!.removeListener(_youtubeListener);
+      _next();
+    }
+  }
+
   void _playImage(PlaylistContent content) {
     _imageTimer?.cancel();
     _imageTimer = Timer(Duration(seconds: content.durationSeconds), () {
@@ -105,6 +144,17 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
       durationSeconds: playedContent.durationSeconds,
     ));
 
+    _videoController?.removeListener(_videoListener);
+    _videoController?.dispose();
+    _videoController = null;
+
+    _youtubeController?.removeListener(_youtubeListener);
+    _youtubeController?.dispose();
+    _youtubeController = null;
+
+    _imageTimer?.cancel();
+    _imageTimer = null;
+
     setState(() {
       _currentIndex = (_currentIndex + 1) % _playlist.length;
     });
@@ -113,7 +163,10 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
 
   @override
   void dispose() {
+    _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
+    _youtubeController?.removeListener(_youtubeListener);
+    _youtubeController?.dispose();
     _imageTimer?.cancel();
     super.dispose();
   }
@@ -133,28 +186,40 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
 
     final content = _playlist[_currentIndex];
 
+    Widget playerWidget;
+    if (content.type == 'video') {
+      playerWidget = _videoController != null && _videoController!.value.isInitialized
+          ? FittedBox(
+              fit: BoxFit.fill,
+              child: SizedBox(
+                width: _videoController!.value.size.width,
+                height: _videoController!.value.size.height,
+                child: VideoPlayer(_videoController!),
+              ),
+            )
+          : const Center(child: CircularProgressIndicator());
+    } else if (content.type == 'youtube_url') {
+      playerWidget = _youtubeController != null
+          ? YoutubePlayer(
+              controller: _youtubeController!,
+              showVideoProgressIndicator: false,
+            )
+          : const Center(child: CircularProgressIndicator());
+    } else {
+      playerWidget = content.isDownloaded && content.localPath != null
+          ? Image.file(File(content.localPath!), fit: BoxFit.fill, width: double.infinity, height: double.infinity)
+          : CachedNetworkImage(
+              imageUrl: content.url,
+              fit: BoxFit.fill,
+              width: double.infinity,
+              height: double.infinity,
+              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+            );
+    }
+
     return Container(
       color: Colors.black,
-      child: content.type == 'video'
-          ? (_videoController != null && _videoController!.value.isInitialized
-              ? FittedBox(
-                  fit: BoxFit.fill,
-                  child: SizedBox(
-                    width: _videoController!.value.size.width,
-                    height: _videoController!.value.size.height,
-                    child: VideoPlayer(_videoController!),
-                  ),
-                )
-              : const Center(child: CircularProgressIndicator()))
-          : (content.isDownloaded && content.localPath != null
-              ? Image.file(File(content.localPath!), fit: BoxFit.fill, width: double.infinity, height: double.infinity)
-              : CachedNetworkImage(
-                  imageUrl: content.url,
-                  fit: BoxFit.fill,
-                  width: double.infinity,
-                  height: double.infinity,
-                  placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                )),
+      child: playerWidget,
     );
   }
 }

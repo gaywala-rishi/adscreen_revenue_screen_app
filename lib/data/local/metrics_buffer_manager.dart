@@ -32,8 +32,10 @@ class MetricsBufferManager {
         'completed': log.completed,
       }).toList();
 
+      final secureStorage = SecureStorageService();
+      final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
       final response = await _dioClient.dio.post(
-        '/android/screens/MOCK-ID/metrics',
+        '/android/screens/$screenId/metrics',
         data: {'logs': payload},
       );
 
@@ -41,7 +43,6 @@ class MetricsBufferManager {
         final idsToDelete = pendingLogs.map((l) => l.id!).toList();
         await IsarDatabaseManager.deleteLogs(idsToDelete);
         
-        final secureStorage = SecureStorageService();
         await secureStorage.incrementSyncedLogsCount(pendingLogs.length);
         
         debugPrint('Synced ${pendingLogs.length} metrics');

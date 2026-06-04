@@ -59,7 +59,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         return;
       }
 
-      final response = await _dioClient.dio.get('/android/screens/MOCK-ID/content');
+      final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
+      final response = await _dioClient.dio.get('/android/screens/$screenId/content');
       if (response.statusCode == 200) {
         final responseData = response.data;
         if (responseData is Map<String, dynamic>) {

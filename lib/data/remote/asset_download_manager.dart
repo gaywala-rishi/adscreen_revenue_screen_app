@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../local/isar_database_manager.dart';
 import '../../domain/models/playlist_content.dart';
+import '../../core/services/playlist_update_notifier.dart';
 
 class AssetDownloadManager {
   final Dio _dio = Dio();
@@ -13,7 +14,9 @@ class AssetDownloadManager {
   static const int maxConcurrentDownloads = 2;
 
   Future<void> syncAssets() async {
-    final contents = (await IsarDatabaseManager.getAllContents()).where((c) => !c.isDownloaded).toList();
+    final contents = (await IsarDatabaseManager.getAllContents())
+        .where((c) => !c.isDownloaded && c.type != 'youtube_url')
+        .toList();
     
     for (var content in contents) {
       while (_activeDownloads >= maxConcurrentDownloads) {
@@ -46,6 +49,7 @@ class AssetDownloadManager {
         content.isDownloaded = true;
         
         await IsarDatabaseManager.savePlaylistContent(content);
+        PlaylistUpdateNotifier.notify();
         debugPrint('Downloaded: ${content.url}');
       }
     } catch (e) {

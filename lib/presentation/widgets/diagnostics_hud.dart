@@ -11,6 +11,7 @@ import '../../domain/models/playlist_content.dart';
 import '../screens/provisioning_screen.dart';
 import '../../core/network/dio_client.dart';
 import '../../core/services/socket_service.dart';
+import '../../data/remote/asset_download_manager.dart';
 
 class DiagnosticsHUD extends StatefulWidget {
   final VoidCallback onClose;
@@ -152,7 +153,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
       final secureStorage = SecureStorageService();
       final isPaired = await secureStorage.hasCredentials();
       if (isPaired) {
-        final response = await DioClient().dio.get('/android/screens/MOCK-ID/content');
+        final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
+        final response = await DioClient().dio.get('/android/screens/$screenId/content');
         if (response.statusCode == 200) {
           final responseData = response.data;
           if (responseData is Map<String, dynamic>) {
@@ -184,9 +186,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
                     final contentId = item['contentId']?.toString() ?? '';
                     final existing = existingMap[contentId];
 
-                    // Mock asset download simulation (marking isDownloaded = true and localPath = mock storage location)
-                    final isDownloaded = existing?.isDownloaded ?? true; // Default to true for simulated local download
-                    final localPath = existing?.localPath ?? 'assets/cache/downloads/content_$contentId.bin';
+                    final isYoutube = item['contentType']?.toString() == 'youtube_url';
+                    final isDownloaded = isYoutube ? false : (existing?.isDownloaded ?? false);
+                    final localPath = isYoutube ? null : existing?.localPath;
 
                     allContents.add(PlaylistContent(
                       contentId: contentId,
@@ -205,6 +207,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               // Write to Isar
               await IsarDatabaseManager.updatePlaylist(allContents);
               PlaylistUpdateNotifier.notify();
+
+              // Trigger actual asset downloading in the background
+              AssetDownloadManager().syncAssets();
             }
           }
         }
@@ -413,7 +418,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
 
                 try {
                   final dioClient = DioClient();
-                  await dioClient.dio.post('/android/screens/MOCK-ID/reset');
+                  final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
+                  await dioClient.dio.post('/android/screens/$screenId/reset');
                 } catch (e) {
                   debugPrint('Failed to notify backend on screen reset: $e');
                 }
