@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'player_screen.dart';
 import '../widgets/diagnostics_hud.dart';
 import '../../core/services/device_info_service.dart';
@@ -15,6 +17,8 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
   final _deviceInfo = DeviceInfoService();
   Timer? _vitalsTimer;
   Map<String, dynamic>? _vitals;
+  bool _isFullscreen = false;
+  final GlobalKey _playerKey = GlobalKey();
 
   @override
   void initState() {
@@ -41,84 +45,139 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Row(
-        children: [
-          // Left Side: Playout Port (Simulated Preview - Matched to Image 2)
-          Expanded(
-            flex: 5,
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                border: Border(right: BorderSide(color: Colors.white10)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.escape && _isFullscreen) {
+            setState(() {
+              _isFullscreen = false;
+            });
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            _isFullscreen
+                ? Positioned.fill(
+                    child: PlayerScreen(
+                      key: _playerKey,
+                      isMuted: true,
+                    ),
+                  )
+                : Row(
                     children: [
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AdScreen Playout Port',
-                              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Simulated Android TV physical display output',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      // Left Side: Playout Port (Simulated Preview - Matched to Image 2)
+                      Expanded(
+                        flex: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            border: Border(right: BorderSide(color: Colors.white10)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'AdScreen Playout Port',
+                                          style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Simulated Android TV physical display output',
+                                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isFullscreen = true;
+                                      });
+                                    },
+                                    icon: const Icon(Icons.play_arrow, size: 16),
+                                    label: const Text('TV Fullscreen', style: TextStyle(fontSize: 12)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blueAccent,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 40),
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF020810),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white10),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: PlayerScreen(
+                                    key: _playerKey,
+                                    isMuted: true,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              _buildFooterMiniStats(),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const PlayerScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.play_arrow, size: 16),
-                        label: const Text('TV Fullscreen', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      // Right Side: Control Console HUD (Embedded)
+                      Expanded(
+                        flex: 5,
+                        child: DiagnosticsHUD(
+                          onClose: () {}, // Refresh logic or no-op when embedded
+                          isEmbedded: true,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 40),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF020810),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white10),
+            if (_isFullscreen)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: SafeArea(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+                          tooltip: 'Exit Fullscreen',
+                          onPressed: () {
+                            setState(() {
+                              _isFullscreen = false;
+                            });
+                          },
+                        ),
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: const PlayerScreen(isMuted: true),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _buildFooterMiniStats(),
-                ],
+                ),
               ),
-            ),
-          ),
-          // Right Side: Control Console HUD (Embedded)
-          Expanded(
-            flex: 5,
-            child: DiagnosticsHUD(
-              onClose: () {}, // Refresh logic or no-op when embedded
-              isEmbedded: true,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
