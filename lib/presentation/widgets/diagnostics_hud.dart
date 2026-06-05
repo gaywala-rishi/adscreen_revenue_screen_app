@@ -426,13 +426,23 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Device Association & Security', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('Register with the central DOOH panel to verify server authentication.', style: TextStyle(color: Colors.grey, fontSize: 13)),
-          const SizedBox(height: 32),
-          Center(
-            child: TextButton.icon(
-              onPressed: () async {
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Device Association & Security', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    const Text('Register with the central DOOH panel to verify server authentication.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              TextButton.icon(
+                onPressed: () async {
                 final secureStorage = SecureStorageService();
                 
                 // Show loading indicator
@@ -473,6 +483,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
+          ],
           ),
           const SizedBox(height: 32),
           _buildInfoCard('PROVISIONED DETAILS', [
