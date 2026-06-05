@@ -21,6 +21,7 @@ class LayoutRegion {
   final double width;
   final double height;
   final String type;
+  final bool hasAudio;
 
   LayoutRegion({
     required this.id,
@@ -29,6 +30,7 @@ class LayoutRegion {
     required this.width,
     required this.height,
     required this.type,
+    this.hasAudio = false,
   });
 
   factory LayoutRegion.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class LayoutRegion {
       width: ((json['width'] ?? 1.0) as num).toDouble(),
       height: ((json['height'] ?? 1.0) as num).toDouble(),
       type: json['type'] ?? json['code'] ?? 'image',
+      hasAudio: json['hasAudio'] ?? false,
     );
   }
 }

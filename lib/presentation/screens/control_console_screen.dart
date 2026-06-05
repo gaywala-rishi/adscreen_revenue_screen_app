@@ -101,7 +101,7 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                         border: Border.all(color: Colors.white10),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: const PlayerScreen(),
+                      child: const PlayerScreen(isMuted: true),
                     ),
                   ),
                   const SizedBox(height: 20),

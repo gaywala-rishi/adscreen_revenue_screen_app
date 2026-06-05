@@ -14,7 +14,8 @@ import '../../core/services/socket_service.dart';
 import '../../core/services/playlist_update_notifier.dart';
 
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key});
+  final bool isMuted;
+  const PlayerScreen({super.key, this.isMuted = false});
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -242,7 +243,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   )
                 : _error != null
                     ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.white)))
-                    : MultiZonePresenter(key: ValueKey(_playlistVersion), layout: _layout!),
+                    : MultiZonePresenter(
+                        key: ValueKey(_playlistVersion), 
+                        layout: _layout!,
+                        isMuted: widget.isMuted,
+                      ),
             if (_showHUD)
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),

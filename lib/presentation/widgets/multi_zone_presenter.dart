@@ -4,8 +4,13 @@ import 'zone_player_frame.dart';
 
 class MultiZonePresenter extends StatelessWidget {
   final LayoutConfig layout;
+  final bool isMuted;
   
-  const MultiZonePresenter({super.key, required this.layout});
+  const MultiZonePresenter({
+    super.key, 
+    required this.layout,
+    this.isMuted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +30,10 @@ class MultiZonePresenter extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.white10, width: 0.5),
                 ),
-                child: ZonePlayerFrame(regionId: region.id),
+                child: ZonePlayerFrame(
+                  regionId: region.id,
+                  isMuted: isMuted || !region.hasAudio,
+                ),
               ),
             );
           }).toList(),

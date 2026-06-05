@@ -7,16 +7,22 @@ import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../data/local/isar_database_manager.dart';
 import '../../domain/models/playlist_content.dart';
 import '../../domain/models/content_play_log.dart';
+import '../../main.dart';
 
 class ZonePlayerFrame extends StatefulWidget {
   final String regionId;
-  const ZonePlayerFrame({super.key, required this.regionId});
+  final bool isMuted;
+  const ZonePlayerFrame({
+    super.key, 
+    required this.regionId,
+    this.isMuted = false,
+  });
 
   @override
   State<ZonePlayerFrame> createState() => _ZonePlayerFrameState();
 }
 
-class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
+class _ZonePlayerFrameState extends State<ZonePlayerFrame> with RouteAware, WidgetsBindingObserver {
   List<PlaylistContent> _playlist = [];
   int _currentIndex = 0;
   VideoPlayerController? _videoController;
@@ -28,7 +34,33 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadPlaylist();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  @override
+  void didPopNext() {
+    // Called when the top route has been popped off, and the current route shows up.
+    if (_playlist.isNotEmpty && _playlist[_currentIndex].type == 'youtube_url') {
+      debugPrint('[ZonePlayerFrame] Resuming YouTube on navigation back in ${widget.regionId}');
+      _youtubeController?.playVideo();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (_playlist.isNotEmpty && _playlist[_currentIndex].type == 'youtube_url') {
+        debugPrint('[ZonePlayerFrame] Resuming YouTube on app resume in ${widget.regionId}');
+        _youtubeController?.playVideo();
+      }
+    }
   }
 
   Future<void> _loadPlaylist() async {
@@ -71,6 +103,7 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
     try {
       await _videoController!.initialize();
       if (mounted) {
+        _videoController!.setVolume(widget.isMuted ? 0 : 1.0);
         setState(() {});
         _videoController!.play();
         _videoController!.addListener(_videoListener);
@@ -104,11 +137,11 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
     _youtubeController = YoutubePlayerController.fromVideoId(
       videoId: videoId,
       autoPlay: true,
-      params: const YoutubePlayerParams(
+      params: YoutubePlayerParams(
         showControls: false,
         showFullscreenButton: false,
         playsInline: true,
-        mute: false,
+        mute: widget.isMuted,
         pointerEvents: PointerEvents.none,
         strictRelatedVideos: true,
         showVideoAnnotations: false,
@@ -174,6 +207,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
 
   @override
   void dispose() {
+    routeObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();
     _youtubeSubscription?.cancel();

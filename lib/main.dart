@@ -4,6 +4,8 @@ import 'presentation/screens/splash_screen.dart';
 import 'core/services/background_service_manager.dart';
 import 'data/local/isar_database_manager.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -35,6 +37,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
+      navigatorObservers: [routeObserver],
       home: const SplashScreen(),
     );
   }
