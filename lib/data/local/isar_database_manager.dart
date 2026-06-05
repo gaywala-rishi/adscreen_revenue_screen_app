@@ -17,4 +17,5 @@ class IsarDatabaseManager {
   static Future<void> logPlay(ContentPlayLog log) => impl.DatabaseImplementation.logPlay(log);
   static Future<List<ContentPlayLog>> getPendingLogs(int limit) => impl.DatabaseImplementation.getPendingLogs(limit);
   static Future<void> deleteLogs(List<int> ids) => impl.DatabaseImplementation.deleteLogs(ids);
+  static Future<void> clearDatabase() => impl.DatabaseImplementation.clearDatabase();
 }

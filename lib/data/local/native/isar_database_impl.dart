@@ -140,4 +140,12 @@ class DatabaseImplementation {
   static Future<void> deleteLogs(List<int> ids) async {
     await _isar.writeTxn(() => _isar.contentPlayLogSchemas.deleteAll(ids));
   }
+
+  static Future<void> clearDatabase() async {
+    await _isar.writeTxn(() async {
+      await _isar.screenConfigSchemas.where().deleteAll();
+      await _isar.playlistContentSchemas.where().deleteAll();
+      await _isar.contentPlayLogSchemas.where().deleteAll();
+    });
+  }
 }
