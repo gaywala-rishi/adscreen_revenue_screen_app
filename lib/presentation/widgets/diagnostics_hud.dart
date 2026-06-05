@@ -461,6 +461,12 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
                   // Disconnect WebSocket
                   SocketService().dispose();
 
+                  // Delete all cached videos/assets
+                  await AssetDownloadManager.clearAllCachedAssets();
+
+                  // Clear local database tables
+                  await IsarDatabaseManager.clearDatabase();
+
                   await secureStorage.clearCredentials();
 
                   if (mounted) {

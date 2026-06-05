@@ -74,4 +74,17 @@ class AssetDownloadManager {
       }
     }
   }
+
+  static Future<void> clearAllCachedAssets() async {
+    try {
+      final appDir = await getApplicationSupportDirectory();
+      final assetsDir = Directory('${appDir.path}/assets');
+      if (await assetsDir.exists()) {
+        await assetsDir.delete(recursive: true);
+        debugPrint('[AssetDownloadManager] All cached assets deleted successfully.');
+      }
+    } catch (e) {
+      debugPrint('[AssetDownloadManager] Failed to clear cached assets: $e');
+    }
+  }
 }

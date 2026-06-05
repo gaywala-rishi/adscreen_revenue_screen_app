@@ -25,4 +25,6 @@ class DatabaseImplementation {
   static Future<List<ContentPlayLog>> getPendingLogs(int limit) async => [];
 
   static Future<void> deleteLogs(List<int> ids) async {}
+
+  static Future<void> clearDatabase() async {}
 }
