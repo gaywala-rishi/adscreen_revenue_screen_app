@@ -39,6 +39,10 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
   List<PlaylistContent> _cachedPlaylists = [];
   List<ContentPlayLog> _pendingLogs = [];
 
+  String _screenName = 'Loading...';
+  String _venueName = 'Loading...';
+  String _venueAddress = 'Loading...';
+
   bool _isSyncing = false;
   ConnectivityResult _connectivityResult = ConnectivityResult.none;
   double? _streamDiffSeconds;
@@ -63,6 +67,33 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     
     final synced = await secureStorage.getSyncedLogsCount();
     
+    String screenName = 'Unregistered';
+    String venueName = 'Unknown Venue';
+    String venueAddress = 'Unknown Address';
+
+    final isPaired = await secureStorage.hasCredentials();
+    if (isPaired && screenId != 'Unregistered') {
+      try {
+        final response = await DioClient().dio.get('/android/screens/$screenId/config');
+        if (response.statusCode == 200) {
+          final data = response.data['data'];
+          if (data != null) {
+            screenName = data['screenName'] ?? screenName;
+            final venue = data['venue'];
+            if (venue != null) {
+              venueName = venue['name'] ?? venueName;
+              final city = venue['city'] ?? '';
+              final address = venue['address'] ?? '';
+              venueAddress = '$address, $city'.trim();
+              if (venueAddress == ',') venueAddress = 'Unknown Address';
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch screen details: $e');
+      }
+    }
+    
     if (mounted) {
       setState(() {
         _serial = serial;
@@ -74,6 +105,9 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         _cachedSchedules = allContents.length;
         _cachedPlaylists = allContents;
         _vitals = vitals;
+        _screenName = screenName;
+        _venueName = venueName;
+        _venueAddress = venueAddress;
       });
     }
   }
@@ -400,6 +434,12 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
             _buildInfoRow('Hardware Serial', _serial),
             _buildInfoRow('System UUID', _uuid),
             _buildInfoRow('OS Platform', _os),
+          ]),
+          const SizedBox(height: 24),
+          _buildInfoCard('PROVISIONED DETAILS', [
+            _buildInfoRow('Screen Name', _screenName),
+            _buildInfoRow('Venue Name', _venueName),
+            _buildInfoRow('Venue Address', _venueAddress),
           ]),
           const SizedBox(height: 32),
           Center(
