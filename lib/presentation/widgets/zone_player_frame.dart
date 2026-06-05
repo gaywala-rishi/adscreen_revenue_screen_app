@@ -109,8 +109,18 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
         showFullscreenButton: false,
         playsInline: true,
         mute: false,
+        pointerEvents: PointerEvents.none,
+        strictRelatedVideos: true,
+        showVideoAnnotations: false,
       ),
     );
+
+    // Force exit fullscreen if it somehow gets triggered (fail-safe)
+    _youtubeController!.setFullScreenListener((isFullScreen) {
+      if (isFullScreen) {
+        _youtubeController!.exitFullScreen();
+      }
+    });
 
     _youtubeSubscription = _youtubeController!.listen((value) {
       if (value.playerState == PlayerState.ended) {
@@ -203,7 +213,9 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> {
       playerWidget = _youtubeController != null
           ? IgnorePointer(
               child: YoutubePlayer(
+                key: ValueKey(content.contentId),
                 controller: _youtubeController!,
+                aspectRatio: 16 / 9,
               ),
             )
           : const Center(child: CircularProgressIndicator());
