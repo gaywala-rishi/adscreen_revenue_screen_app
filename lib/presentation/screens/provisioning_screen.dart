@@ -23,7 +23,6 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
   String? _serialNumber;
   bool _isLoading = true;
   String? _error;
-  DateTime? _expiresAt;
   Duration _timeRemaining = Duration.zero;
   Timer? _countdownTimer;
 
@@ -101,15 +100,13 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
           }
         } else {
           final pCode = bodyData['pairingCode']?.toString() ?? '--- ---';
-          final expiresAtStr = bodyData['pairingCodeExpiresAt']?.toString();
-          final expiresAt = expiresAtStr != null ? DateTime.tryParse(expiresAtStr) : null;
+          final expiresInSeconds = (bodyData['expiresInSeconds'] as num?)?.toInt() ?? 600;
 
-          debugPrint('[ProvisioningScreen] Screen is not paired. Setting PIN: $pCode (expires: $expiresAtStr) and starting polling loop.');
+          debugPrint('[ProvisioningScreen] Screen is not paired. Setting PIN: $pCode (expires in: ${expiresInSeconds}s) and starting polling loop.');
           setState(() {
             _pairingCode = pCode;
-            _expiresAt = expiresAt;
+            _timeRemaining = Duration(seconds: expiresInSeconds);
             _isLoading = false;
-            _updateTimeRemaining();
           });
           
           _startCountdownTimer();
@@ -133,42 +130,23 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
 
   void _startCountdownTimer() {
     _countdownTimer?.cancel();
-    if (_expiresAt == null) return;
-
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      _updateTimeRemaining();
+      setState(() {
+        if (_timeRemaining.inSeconds <= 1) {
+          _timeRemaining = Duration.zero;
+          _pairingCode = null;
+          timer.cancel();
+          debugPrint('[ProvisioningScreen] Pairing PIN expired. Refreshing code...');
+          _initProvisioning();
+        } else {
+          _timeRemaining = _timeRemaining - const Duration(seconds: 1);
+        }
+      });
     });
-  }
-
-  void _updateTimeRemaining() {
-    if (_expiresAt == null) {
-      setState(() {
-        _timeRemaining = Duration.zero;
-      });
-      return;
-    }
-
-    final now = DateTime.now();
-    final difference = _expiresAt!.difference(now);
-
-    if (difference.isNegative || difference == Duration.zero) {
-      _countdownTimer?.cancel();
-      setState(() {
-        _timeRemaining = Duration.zero;
-        _pairingCode = null; // Mark code as expired
-      });
-      // Automatically refresh the code
-      debugPrint('[ProvisioningScreen] Pairing PIN expired. Refreshing code...');
-      _initProvisioning();
-    } else {
-      setState(() {
-        _timeRemaining = difference;
-      });
-    }
   }
 
   void _startPairingPoll() {
@@ -178,19 +156,27 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     _socketService.initPairingSocket(
       serialNumber: _serialNumber!,
       onPaired: (screenId, token) async {
-        debugPrint('[ProvisioningScreen] Success! Pairing completed via WebSocket.');
-        await _secureStorage.saveScreenCredentials(screenId, token);
+        debugPrint('[ProvisioningScreen] Success! Pairing completed via WebSocket event. screenId: $screenId');
+        try {
+          await _secureStorage.saveScreenCredentials(screenId, token);
+          debugPrint('[ProvisioningScreen] Saved credentials successfully to secure storage.');
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Screen successfully paired and activated!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
-          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Screen successfully paired and activated!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            debugPrint('[ProvisioningScreen] Pushing replacement ControlConsoleScreen...');
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const ControlConsoleScreen()),
+            );
+          } else {
+            debugPrint('[ProvisioningScreen] Widget not mounted, skipping navigation.');
+          }
+        } catch (e) {
+          debugPrint('[ProvisioningScreen] Error inside onPaired callback: $e');
         }
       },
     );
