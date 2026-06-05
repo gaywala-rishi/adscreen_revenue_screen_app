@@ -79,7 +79,7 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                       ElevatedButton.icon(
                         onPressed: () {
                           Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const PlayerScreen()),
+                            MaterialPageRoute(builder: (_) => const PlayerScreen(showBackButton: true)),
                           );
                         },
                         icon: const Icon(Icons.play_arrow, size: 16),

@@ -15,7 +15,8 @@ import '../../core/services/playlist_update_notifier.dart';
 
 class PlayerScreen extends StatefulWidget {
   final bool isMuted;
-  const PlayerScreen({super.key, this.isMuted = false});
+  final bool showBackButton;
+  const PlayerScreen({super.key, this.isMuted = false, this.showBackButton = false});
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -213,6 +214,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.keyD) {
             _toggleHUD();
+          } else if (event.logicalKey == LogicalKeyboardKey.escape && widget.showBackButton) {
+            Navigator.of(context).pop();
           }
         }
       },
@@ -248,6 +251,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         layout: _layout!,
                         isMuted: widget.isMuted,
                       ),
+            if (widget.showBackButton)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: SafeArea(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: ClipOval(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+                          tooltip: 'Exit Fullscreen',
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             if (_showHUD)
               BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
