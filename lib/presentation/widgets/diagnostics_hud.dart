@@ -428,64 +428,68 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Device Association & Security', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text('Register with the central DOOH panel to verify server authentication.', style: TextStyle(color: Colors.grey, fontSize: 13)),
-                  ],
+              const Text(
+                'Device Association',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 16),
-              TextButton.icon(
+              TextButton(
                 onPressed: () async {
-                final secureStorage = SecureStorageService();
-                
-                // Show loading indicator
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(color: Colors.cyanAccent),
-                  ),
-                );
-
-                try {
-                  final dioClient = DioClient();
-                  final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
-                  await dioClient.dio.post('/android/screens/$screenId/reset');
-                } catch (e) {
-                  debugPrint('Failed to notify backend on screen reset: $e');
-                }
-
-                // Disconnect WebSocket
-                SocketService().dispose();
-
-                await secureStorage.clearCredentials();
-
-                if (mounted) {
-                  // Dismiss loading dialog
-                  Navigator.of(context).pop();
-
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
-                    (route) => false,
+                  final secureStorage = SecureStorageService();
+                  
+                  // Show loading indicator
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(color: Colors.cyanAccent),
+                    ),
                   );
-                }
-              },
-              icon: const Icon(Icons.link_off, color: Colors.redAccent, size: 16),
-              label: const Text('Disconnect & Reset', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500, fontSize: 12)),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+
+                  try {
+                    final dioClient = DioClient();
+                    final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
+                    await dioClient.dio.post('/android/screens/$screenId/reset');
+                  } catch (e) {
+                    debugPrint('Failed to notify backend on screen reset: $e');
+                  }
+
+                  // Disconnect WebSocket
+                  SocketService().dispose();
+
+                  await secureStorage.clearCredentials();
+
+                  if (mounted) {
+                    // Dismiss loading dialog
+                    Navigator.of(context).pop();
+
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const ProvisioningScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Disconnect',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           _buildInfoCard('PROVISIONED DETAILS', [
             _buildInfoRow('Screen Name', _screenName),
             _buildInfoRow('Venue Name', _venueName),
