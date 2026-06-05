@@ -430,20 +430,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
           const SizedBox(height: 8),
           const Text('Register with the central DOOH panel to verify server authentication.', style: TextStyle(color: Colors.grey, fontSize: 13)),
           const SizedBox(height: 32),
-          _buildInfoCard('HARDWARE METADATA', [
-            _buildInfoRow('Hardware Serial', _serial),
-            _buildInfoRow('System UUID', _uuid),
-            _buildInfoRow('OS Platform', _os),
-          ]),
-          const SizedBox(height: 24),
-          _buildInfoCard('PROVISIONED DETAILS', [
-            _buildInfoRow('Screen Name', _screenName),
-            _buildInfoRow('Venue Name', _venueName),
-            _buildInfoRow('Venue Address', _venueAddress),
-          ]),
-          const SizedBox(height: 32),
           Center(
-            child: ElevatedButton.icon(
+            child: TextButton.icon(
               onPressed: () async {
                 final secureStorage = SecureStorageService();
                 
@@ -479,16 +467,25 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
                   );
                 }
               },
-              icon: const Icon(Icons.link_off, color: Colors.black),
-              label: const Text('DISCONNECT & RESET DEVICE', style: TextStyle(fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              icon: const Icon(Icons.link_off, color: Colors.redAccent, size: 16),
+              label: const Text('Disconnect & Reset', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.w500, fontSize: 12)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
           ),
+          const SizedBox(height: 32),
+          _buildInfoCard('PROVISIONED DETAILS', [
+            _buildInfoRow('Screen Name', _screenName),
+            _buildInfoRow('Venue Name', _venueName),
+            _buildInfoRow('Venue Address', _venueAddress),
+          ]),
+          const SizedBox(height: 24),
+          _buildInfoCard('HARDWARE METADATA', [
+            _buildInfoRow('Hardware Serial', _serial),
+            _buildInfoRow('System UUID', _uuid),
+            _buildInfoRow('OS Platform', _os),
+          ]),
         ],
       ),
     );
@@ -727,6 +724,7 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
 
   Widget _buildInfoCard(String title, List<Widget> children) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),

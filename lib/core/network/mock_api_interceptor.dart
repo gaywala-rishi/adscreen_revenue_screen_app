@@ -169,6 +169,33 @@ class MockApiInterceptor extends Interceptor {
       );
     }
 
+    if (path.contains('/android/screens/') && path.contains('/config')) {
+      return handler.resolve(
+        Response(
+          requestOptions: options,
+          data: {
+            'success': true,
+            'data': {
+              'screenId': 'MOCK-ID',
+              'screenName': 'Simulated Device',
+              'venue': {
+                'name': 'Test Environment',
+                'city': 'San Francisco',
+                'address': '123 Fake St'
+              },
+              'config': {
+                'heartbeatIntervalSeconds': 60,
+                'contentSyncIntervalSeconds': 300,
+                'metricsUploadBatchSize': 50,
+                'offlineCacheDurationHours': 4
+              }
+            }
+          },
+          statusCode: 200,
+        ),
+      );
+    }
+
     if (path.contains('/heartbeat') || path.contains('/metrics')) {
       return handler.resolve(
         Response(
