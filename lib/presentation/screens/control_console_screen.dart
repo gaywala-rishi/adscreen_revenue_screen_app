@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'player_screen.dart';
@@ -150,29 +149,22 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
                   ),
             if (_isFullscreen)
               Positioned(
-                top: 16,
-                left: 16,
+                bottom: 24,
+                left: 24,
                 child: SafeArea(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white12),
+                  child: IconButton(
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black38,
+                      hoverColor: Colors.black54,
+                      padding: const EdgeInsets.all(10),
                     ),
-                    child: ClipOval(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
-                          tooltip: 'Exit Fullscreen',
-                          onPressed: () {
-                            setState(() {
-                              _isFullscreen = false;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+                    tooltip: 'Exit Fullscreen',
+                    onPressed: () {
+                      setState(() {
+                        _isFullscreen = false;
+                      });
+                    },
                   ),
                 ),
               ),
