@@ -7,6 +7,9 @@ class SecureStorageService {
   static const String _keyScreenId = 'screen_id';
   static const String _keyScreenToken = 'screen_token';
   static const String _keyCachedLayout = 'cached_layout';
+  static const String _keyScreenName = 'screen_name';
+  static const String _keyVenueName = 'venue_name';
+  static const String _keyVenueAddress = 'venue_address';
 
   static const String _keySyncedLogsCount = 'synced_logs_count';
 
@@ -27,7 +30,27 @@ class SecureStorageService {
     await _storage.delete(key: _keyScreenId);
     await _storage.delete(key: _keyScreenToken);
     await _storage.delete(key: _keyCachedLayout);
+    await _storage.delete(key: _keyScreenName);
+    await _storage.delete(key: _keyVenueName);
+    await _storage.delete(key: _keyVenueAddress);
     await clearSyncedLogsCount();
+  }
+
+  Future<void> saveScreenDetails(String name, String venue, String address) async {
+    await _storage.write(key: _keyScreenName, value: name);
+    await _storage.write(key: _keyVenueName, value: venue);
+    await _storage.write(key: _keyVenueAddress, value: address);
+  }
+
+  Future<Map<String, String>> getScreenDetails() async {
+    final name = await _storage.read(key: _keyScreenName);
+    final venue = await _storage.read(key: _keyVenueName);
+    final address = await _storage.read(key: _keyVenueAddress);
+    return {
+      'screenName': name ?? 'Unregistered',
+      'venueName': venue ?? 'Unknown Venue',
+      'venueAddress': address ?? 'Unknown Address',
+    };
   }
 
   Future<bool> hasCredentials() async {

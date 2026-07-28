@@ -88,6 +88,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
         }
         return;
       }
+      
+      if (e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.connectionTimeout) {
+        setState(() {
+          _error = "No campaign assigned or connection timed out.";
+          _isLoading = false;
+        });
+        return;
+      }
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -112,7 +121,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
     if (schedule == null) {
       setState(() {
-        _error = "No content scheduled";
+        _error = "No campaigns assigned";
         _isLoading = false;
       });
       return;
@@ -245,7 +254,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     ),
                   )
                 : _error != null
-                    ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.white)))
+                    ? Center(child: Text('$_error', style: const TextStyle(color: Colors.white)))
                     : MultiZonePresenter(
                         key: ValueKey(_playlistVersion), 
                         layout: _layout!,

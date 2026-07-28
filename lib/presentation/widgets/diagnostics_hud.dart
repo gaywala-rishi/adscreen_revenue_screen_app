@@ -67,9 +67,11 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
     
     final synced = await secureStorage.getSyncedLogsCount();
     
-    String screenName = 'Unregistered';
-    String venueName = 'Unknown Venue';
-    String venueAddress = 'Unknown Address';
+    // Load from cache first
+    final cachedDetails = await secureStorage.getScreenDetails();
+    String screenName = cachedDetails['screenName']!;
+    String venueName = cachedDetails['venueName']!;
+    String venueAddress = cachedDetails['venueAddress']!;
 
     final isPaired = await secureStorage.hasCredentials();
     if (isPaired && screenId != 'Unregistered') {
@@ -87,6 +89,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               venueAddress = '$address, $city'.trim();
               if (venueAddress == ',') venueAddress = 'Unknown Address';
             }
+            // Save updated details to cache
+            await secureStorage.saveScreenDetails(screenName, venueName, venueAddress);
           }
         }
       } catch (e) {
