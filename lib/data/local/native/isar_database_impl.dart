@@ -50,6 +50,8 @@ class DatabaseImplementation {
       ..isDownloaded = c.isDownloaded
       ..regionId = c.regionId
       ..order = c.order
+      ..campaignId = c.campaignId
+      ..scheduleId = c.scheduleId
     ).toList();
 
     await _isar.writeTxn(() async {
@@ -75,6 +77,8 @@ class DatabaseImplementation {
       isDownloaded: s.isDownloaded,
       regionId: s.regionId,
       order: s.order,
+      campaignId: s.campaignId,
+      scheduleId: s.scheduleId,
     )).toList();
   }
 
@@ -90,6 +94,8 @@ class DatabaseImplementation {
       isDownloaded: s.isDownloaded,
       regionId: s.regionId,
       order: s.order,
+      campaignId: s.campaignId,
+      scheduleId: s.scheduleId,
     )).toList();
   }
 
@@ -103,7 +109,9 @@ class DatabaseImplementation {
       ..localPath = content.localPath
       ..isDownloaded = content.isDownloaded
       ..regionId = content.regionId
-      ..order = content.order;
+      ..order = content.order
+      ..campaignId = content.campaignId
+      ..scheduleId = content.scheduleId;
     
     await _isar.writeTxn(() => _isar.playlistContentSchemas.put(schema));
   }

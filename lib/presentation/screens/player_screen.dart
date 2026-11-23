@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'provisioning_screen.dart';
 import '../../core/services/secure_storage_service.dart';
 import 'package:dio/dio.dart';
@@ -12,6 +13,7 @@ import '../widgets/multi_zone_presenter.dart';
 import '../widgets/diagnostics_hud.dart';
 import '../../core/services/socket_service.dart';
 import '../../core/services/playlist_update_notifier.dart';
+import '../../data/remote/asset_download_manager.dart';
 
 class PlayerScreen extends StatefulWidget {
   final bool isMuted;
@@ -44,6 +46,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
       setState(() {
         _playlistVersion++;
       });
+      if (_error != null || _layout == null) {
+        _fetchContent();
+      }
     }
   }
 
@@ -134,6 +139,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final existingContents = await IsarDatabaseManager.getAllContents();
     final existingMap = {for (var c in existingContents) c.contentId: c};
 
+    final scheduleId = schedule['scheduleId']?.toString();
     List<PlaylistContent> allContents = [];
     final regionsData = schedule['regionsData'] as Map<String, dynamic>? ?? {};
     
@@ -153,12 +159,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
             order: order++,
             isDownloaded: existing?.isDownloaded ?? false,
             localPath: existing?.localPath,
+            campaignId: item['campaignId']?.toString(),
+            scheduleId: scheduleId,
           ));
         }
       }
     });
 
     await IsarDatabaseManager.updatePlaylist(allContents);
+    AssetDownloadManager().syncAssets();
 
     // Initialize authenticated WebSocket to listen for incoming admin commands (Ping, Sync, Reboot)
     final token = await secureStorage.getScreenToken();
@@ -264,20 +273,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
               Positioned(
                 top: 16,
                 left: 16,
-                child: SafeArea(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: ClipOval(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
-                          tooltip: 'Exit Fullscreen',
-                          onPressed: () => Navigator.of(context).pop(),
+                child: PointerInterceptor(
+                  child: SafeArea(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: ClipOval(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+                            tooltip: 'Exit Fullscreen',
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
                         ),
                       ),
                     ),

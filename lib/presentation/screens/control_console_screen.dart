@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'player_screen.dart';
 import '../widgets/diagnostics_hud.dart';
 import '../../core/services/device_info_service.dart';
@@ -151,20 +152,22 @@ class _ControlConsoleScreenState extends State<ControlConsoleScreen> {
               Positioned(
                 bottom: 24,
                 left: 24,
-                child: SafeArea(
-                  child: IconButton(
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.black38,
-                      hoverColor: Colors.black54,
-                      padding: const EdgeInsets.all(10),
+                child: PointerInterceptor(
+                  child: SafeArea(
+                    child: IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black38,
+                        hoverColor: Colors.black54,
+                        padding: const EdgeInsets.all(10),
+                      ),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
+                      tooltip: 'Exit Fullscreen',
+                      onPressed: () {
+                        setState(() {
+                          _isFullscreen = false;
+                        });
+                      },
                     ),
-                    icon: const Icon(Icons.arrow_back, color: Colors.white70, size: 20),
-                    tooltip: 'Exit Fullscreen',
-                    onPressed: () {
-                      setState(() {
-                        _isFullscreen = false;
-                      });
-                    },
                   ),
                 ),
               ),

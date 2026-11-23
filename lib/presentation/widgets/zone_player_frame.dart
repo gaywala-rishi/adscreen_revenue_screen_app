@@ -65,6 +65,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> with RouteAware, Widg
 
   Future<void> _loadPlaylist() async {
     final contents = await IsarDatabaseManager.getPlaylistForRegion(widget.regionId);
+    final allInDb = await IsarDatabaseManager.getAllContents();
+    debugPrint('[ZonePlayerFrame] Region "${widget.regionId}" loaded ${contents.length} items. All items in Isar DB: ${allInDb.map((c) => "ContentID: ${c.contentId}, RegionID: ${c.regionId}").toList()}');
     if (mounted) {
       setState(() {
         _playlist = contents;
@@ -180,8 +182,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> with RouteAware, Widg
     final playedContent = _playlist[_currentIndex];
     IsarDatabaseManager.logPlay(ContentPlayLog(
       contentId: playedContent.contentId,
-      campaignId: 'MOCK-CAMP',
-      scheduleId: 'MOCK-SCHED',
+      campaignId: playedContent.campaignId ?? '',
+      scheduleId: playedContent.scheduleId ?? '',
       layoutRegionId: widget.regionId,
       playedAt: DateTime.now(),
       durationSeconds: playedContent.durationSeconds,

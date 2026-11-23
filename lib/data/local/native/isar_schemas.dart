@@ -30,6 +30,9 @@ class PlaylistContentSchema {
   late String regionId; // e.g., 'AD_1', 'AD_2'
   
   int order = 0;
+
+  String? campaignId;
+  String? scheduleId;
 }
 
 @collection

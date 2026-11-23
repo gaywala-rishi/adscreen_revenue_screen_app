@@ -8,6 +8,8 @@ class PlaylistContent {
   bool isDownloaded;
   String regionId;
   int order;
+  String? campaignId;
+  String? scheduleId;
 
   PlaylistContent({
     this.id,
@@ -19,5 +21,7 @@ class PlaylistContent {
     this.isDownloaded = false,
     required this.regionId,
     this.order = 0,
+    this.campaignId,
+    this.scheduleId,
   });
 }

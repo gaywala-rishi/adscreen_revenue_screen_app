@@ -208,11 +208,12 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
               schedule = responseData;
             }
 
-            if (schedule != null) {
+             if (schedule != null) {
               // 3. Save layout configuration & playlists
               final existingContents = await IsarDatabaseManager.getAllContents();
               final existingMap = {for (var c in existingContents) c.contentId: c};
 
+              final scheduleId = schedule['scheduleId']?.toString();
               List<PlaylistContent> allContents = [];
               final regionsData = schedule['regionsData'] as Map<String, dynamic>? ?? {};
 
@@ -237,6 +238,8 @@ class _DiagnosticsHUDState extends State<DiagnosticsHUD> with SingleTickerProvid
                       order: order++,
                       isDownloaded: isDownloaded,
                       localPath: localPath,
+                      campaignId: item['campaignId']?.toString(),
+                      scheduleId: scheduleId,
                     ));
                   }
                 }

@@ -990,34 +990,44 @@ const PlaylistContentSchemaSchema = CollectionSchema(
   name: r'PlaylistContentSchema',
   id: 1045612180147011473,
   properties: {
-    r'contentId': PropertySchema(
+    r'campaignId': PropertySchema(
       id: 0,
+      name: r'campaignId',
+      type: IsarType.string,
+    ),
+    r'contentId': PropertySchema(
+      id: 1,
       name: r'contentId',
       type: IsarType.string,
     ),
     r'durationSeconds': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'durationSeconds',
       type: IsarType.long,
     ),
     r'isDownloaded': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'isDownloaded',
       type: IsarType.bool,
     ),
     r'localPath': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'localPath',
       type: IsarType.string,
     ),
-    r'order': PropertySchema(id: 4, name: r'order', type: IsarType.long),
+    r'order': PropertySchema(id: 5, name: r'order', type: IsarType.long),
     r'regionId': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'regionId',
       type: IsarType.string,
     ),
-    r'type': PropertySchema(id: 6, name: r'type', type: IsarType.string),
-    r'url': PropertySchema(id: 7, name: r'url', type: IsarType.string),
+    r'scheduleId': PropertySchema(
+      id: 7,
+      name: r'scheduleId',
+      type: IsarType.string,
+    ),
+    r'type': PropertySchema(id: 8, name: r'type', type: IsarType.string),
+    r'url': PropertySchema(id: 9, name: r'url', type: IsarType.string),
   },
 
   estimateSize: _playlistContentSchemaEstimateSize,
@@ -1055,6 +1065,12 @@ int _playlistContentSchemaEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.campaignId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.contentId.length * 3;
   {
     final value = object.localPath;
@@ -1063,6 +1079,12 @@ int _playlistContentSchemaEstimateSize(
     }
   }
   bytesCount += 3 + object.regionId.length * 3;
+  {
+    final value = object.scheduleId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.type.length * 3;
   bytesCount += 3 + object.url.length * 3;
   return bytesCount;
@@ -1074,14 +1096,16 @@ void _playlistContentSchemaSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.contentId);
-  writer.writeLong(offsets[1], object.durationSeconds);
-  writer.writeBool(offsets[2], object.isDownloaded);
-  writer.writeString(offsets[3], object.localPath);
-  writer.writeLong(offsets[4], object.order);
-  writer.writeString(offsets[5], object.regionId);
-  writer.writeString(offsets[6], object.type);
-  writer.writeString(offsets[7], object.url);
+  writer.writeString(offsets[0], object.campaignId);
+  writer.writeString(offsets[1], object.contentId);
+  writer.writeLong(offsets[2], object.durationSeconds);
+  writer.writeBool(offsets[3], object.isDownloaded);
+  writer.writeString(offsets[4], object.localPath);
+  writer.writeLong(offsets[5], object.order);
+  writer.writeString(offsets[6], object.regionId);
+  writer.writeString(offsets[7], object.scheduleId);
+  writer.writeString(offsets[8], object.type);
+  writer.writeString(offsets[9], object.url);
 }
 
 PlaylistContentSchema _playlistContentSchemaDeserialize(
@@ -1091,15 +1115,17 @@ PlaylistContentSchema _playlistContentSchemaDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = PlaylistContentSchema();
-  object.contentId = reader.readString(offsets[0]);
-  object.durationSeconds = reader.readLong(offsets[1]);
+  object.campaignId = reader.readStringOrNull(offsets[0]);
+  object.contentId = reader.readString(offsets[1]);
+  object.durationSeconds = reader.readLong(offsets[2]);
   object.id = id;
-  object.isDownloaded = reader.readBool(offsets[2]);
-  object.localPath = reader.readStringOrNull(offsets[3]);
-  object.order = reader.readLong(offsets[4]);
-  object.regionId = reader.readString(offsets[5]);
-  object.type = reader.readString(offsets[6]);
-  object.url = reader.readString(offsets[7]);
+  object.isDownloaded = reader.readBool(offsets[3]);
+  object.localPath = reader.readStringOrNull(offsets[4]);
+  object.order = reader.readLong(offsets[5]);
+  object.regionId = reader.readString(offsets[6]);
+  object.scheduleId = reader.readStringOrNull(offsets[7]);
+  object.type = reader.readString(offsets[8]);
+  object.url = reader.readString(offsets[9]);
   return object;
 }
 
@@ -1111,20 +1137,24 @@ P _playlistContentSchemaDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
-    case 1:
-      return (reader.readLong(offset)) as P;
-    case 2:
-      return (reader.readBool(offset)) as P;
-    case 3:
       return (reader.readStringOrNull(offset)) as P;
-    case 4:
-      return (reader.readLong(offset)) as P;
-    case 5:
+    case 1:
       return (reader.readString(offset)) as P;
+    case 2:
+      return (reader.readLong(offset)) as P;
+    case 3:
+      return (reader.readBool(offset)) as P;
+    case 4:
+      return (reader.readStringOrNull(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1293,6 +1323,213 @@ extension PlaylistContentSchemaQueryFilter
           PlaylistContentSchema,
           QFilterCondition
         > {
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'campaignId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'campaignId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'campaignId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'campaignId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'campaignId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'campaignId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  campaignIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'campaignId', value: ''),
+      );
+    });
+  }
+
   QueryBuilder<
     PlaylistContentSchema,
     PlaylistContentSchema,
@@ -2093,6 +2330,213 @@ extension PlaylistContentSchemaQueryFilter
     PlaylistContentSchema,
     QAfterFilterCondition
   >
+  scheduleIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'scheduleId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'scheduleId'),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'scheduleId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'scheduleId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'scheduleId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'scheduleId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
+  scheduleIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'scheduleId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<
+    PlaylistContentSchema,
+    PlaylistContentSchema,
+    QAfterFilterCondition
+  >
   typeEqualTo(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
@@ -2466,6 +2910,20 @@ extension PlaylistContentSchemaQueryLinks
 extension PlaylistContentSchemaQuerySortBy
     on QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QSortBy> {
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  sortByCampaignId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campaignId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  sortByCampaignIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campaignId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
   sortByContentId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'contentId', Sort.asc);
@@ -2550,6 +3008,20 @@ extension PlaylistContentSchemaQuerySortBy
   }
 
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  sortByScheduleId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scheduleId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  sortByScheduleIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scheduleId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
   sortByType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'type', Sort.asc);
@@ -2580,6 +3052,20 @@ extension PlaylistContentSchemaQuerySortBy
 
 extension PlaylistContentSchemaQuerySortThenBy
     on QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QSortThenBy> {
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  thenByCampaignId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campaignId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  thenByCampaignIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'campaignId', Sort.desc);
+    });
+  }
+
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
   thenByContentId() {
     return QueryBuilder.apply(this, (query) {
@@ -2679,6 +3165,20 @@ extension PlaylistContentSchemaQuerySortThenBy
   }
 
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  thenByScheduleId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scheduleId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
+  thenByScheduleIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'scheduleId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QAfterSortBy>
   thenByType() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'type', Sort.asc);
@@ -2709,6 +3209,13 @@ extension PlaylistContentSchemaQuerySortThenBy
 
 extension PlaylistContentSchemaQueryWhereDistinct
     on QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QDistinct> {
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QDistinct>
+  distinctByCampaignId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'campaignId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QDistinct>
   distinctByContentId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -2752,6 +3259,13 @@ extension PlaylistContentSchemaQueryWhereDistinct
   }
 
   QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QDistinct>
+  distinctByScheduleId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'scheduleId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, PlaylistContentSchema, QDistinct>
   distinctByType({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'type', caseSensitive: caseSensitive);
@@ -2776,6 +3290,13 @@ extension PlaylistContentSchemaQueryProperty
   QueryBuilder<PlaylistContentSchema, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, String?, QQueryOperations>
+  campaignIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'campaignId');
     });
   }
 
@@ -2817,6 +3338,13 @@ extension PlaylistContentSchemaQueryProperty
   regionIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'regionId');
+    });
+  }
+
+  QueryBuilder<PlaylistContentSchema, String?, QQueryOperations>
+  scheduleIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'scheduleId');
     });
   }
 
