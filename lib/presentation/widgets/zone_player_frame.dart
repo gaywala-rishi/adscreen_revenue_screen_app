@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 import '../../data/local/isar_database_manager.dart';
+import '../../data/local/metrics_buffer_manager.dart';
 import '../../domain/models/playlist_content.dart';
 import '../../domain/models/content_play_log.dart';
 import '../../main.dart';
@@ -188,6 +189,8 @@ class _ZonePlayerFrameState extends State<ZonePlayerFrame> with RouteAware, Widg
       playedAt: DateTime.now(),
       durationSeconds: playedContent.durationSeconds,
     ));
+    // Auto-flush metrics buffer asynchronously
+    MetricsBufferManager().syncMetrics();
 
     _videoController?.removeListener(_videoListener);
     _videoController?.dispose();

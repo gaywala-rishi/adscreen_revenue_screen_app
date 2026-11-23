@@ -24,19 +24,24 @@ class MetricsBufferManager {
 
       final payload = pendingLogs.map((log) => {
         'contentId': log.contentId,
+        'creativeId': log.contentId,
         'campaignId': log.campaignId,
         'scheduleId': log.scheduleId,
         'regionId': log.layoutRegionId,
+        'layoutRegionId': log.layoutRegionId,
         'playedAt': log.playedAt.toIso8601String(),
+        'startedAt': log.playedAt.toIso8601String(),
         'duration': log.durationSeconds,
+        'durationSeconds': log.durationSeconds,
         'completed': log.completed,
+        'completedFully': log.completed,
       }).toList();
 
       final secureStorage = SecureStorageService();
       final screenId = await secureStorage.getScreenId() ?? 'MOCK-ID';
       final response = await _dioClient.dio.post(
         '/android/screens/$screenId/metrics',
-        data: {'logs': payload},
+        data: {'plays': payload, 'logs': payload},
       );
 
       if (response.statusCode == 200) {

@@ -213,12 +213,14 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
       );
 
       if (response.statusCode == 200) {
-        final data = response.data;
+        final bodyData = response.data is Map && response.data['data'] is Map
+            ? response.data['data'] as Map<String, dynamic>
+            : (response.data is Map ? response.data as Map<String, dynamic> : <String, dynamic>{});
         
-        await _secureStorage.saveScreenCredentials(
-          data['screenId'] ?? 'SCREEN-MANUAL-999',
-          data['screenToken'] ?? 'mock-jwt-manual-token-abc-123',
-        );
+        final screenId = (bodyData['screenId'] ?? bodyData['id'])?.toString() ?? 'SCREEN-MANUAL-999';
+        final screenToken = (bodyData['screenToken'] ?? bodyData['token'])?.toString() ?? 'mock-jwt-manual-token-abc-123';
+
+        await _secureStorage.saveScreenCredentials(screenId, screenToken);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
